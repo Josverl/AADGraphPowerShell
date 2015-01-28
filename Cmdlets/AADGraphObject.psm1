@@ -1,4 +1,21 @@
-function Get-AADObject([string]$type) {
+function Get-AADObject {
+    <#
+    .Synopsis
+    Retrieves an entity from Microsoft Azure Active Directory (AAD).
+
+    .Parameter Type
+    The type of entity to retrieve from Microsoft Azure Active Directory. A list of valid entities can be found
+    in the AAD documentation. See the LINKS section.
+
+    .Links
+    Microsoft Azure Active Directory Entity Reference: https://msdn.microsoft.com/en-us/library/azure/dn151470.aspx
+    #>
+    [CmdletBinding()]
+    param (
+        [ValidateSet('Applications', 'Contacts', 'Devices', 'DirectoryObjects', 'DirectoryRoles', 'DirectoryRoleTemplates',
+        'Groups', 'OAuth2PermissionGrants', 'ServicePrincipals', 'SubscribedSkus', 'TenantDetails', 'Users')]
+        [string] $Type
+    )
   $objects = $null
   if($authenticationResult -ne $null){
     $header = $authenticationResult.CreateAuthorizationHeader()
@@ -123,39 +140,68 @@ function Get-AADLinkedObject([string]$type, [string] $id, [string]$relationship,
   return $objects
 }
 
-function Set-AADObjectProperty([string]$type, [string] $id, [string]$property, [object]$value, [bool]$isLinked, [string]$contentType) {
-  if($global:authenticationResult -ne $null) {
+function Set-AADObjectProperty {
+    <#
+    .Synopsis
+    Sets the property of a Microsoft Azure Active Directory object.
+    #>
+    [CmdletBinding()]
+    param (
+        [ValidateSet('Applications', 'Contacts', 'Devices', 'DirectoryObjects', 'DirectoryRoles', 'DirectoryRoleTemplates',
+        'Groups', 'OAuth2PermissionGrants', 'ServicePrincipals', 'SubscribedSkus', 'TenantDetails', 'Users')]
+        [string] $Type, 
+        [string] $Id, 
+        [string] $Property, 
+        [object] $Value, 
+        [bool] $IsLinked,
+        [string] $ContentType
+    )
+
+    if (!$global:authenticationResult) {
+        throw 'You are not authenticated to Microsoft Azure Active Directory. Use Connect-AAD to authenticate, and then retry your command.';
+        return;
+    }
+
     $header = $authenticationResult.CreateAuthorizationHeader()
     $uri = $null
-    if($isLinked) {$uri = [string]::Format('https://graph.windows.net/{0}/{1}/{2}/$links/{3}?api-version=2013-04-05',$authenticationResult.TenantId, $type, $id, $property)}
-    else {$uri = [string]::Format('https://graph.windows.net/{0}/{1}/{2}/{3}?api-version=2013-04-05',$authenticationResult.TenantId, $type, $id, $property)}
+    if($isLinked) {
+        $uri = [string]::Format('https://graph.windows.net/{0}/{1}/{2}/$links/{3}?api-version=2013-04-05',$authenticationResult.TenantId, $type, $id, $property)
+        }
+    else {
+        $uri = [string]::Format('https://graph.windows.net/{0}/{1}/{2}/{3}?api-version=2013-04-05',$authenticationResult.TenantId, $type, $id, $property)
+        }
     Write-Host HTTP PUT $uri -ForegroundColor Cyan
 
-    $body = $null
+    $HttpBody = $null;
     $byteArray = $null
     
     if($contentType.Trim() -eq "" -or $contentType -eq $null -or $contentType.ToLower() -eq "application/json") {
       $contentType = "application/json"
       $enc = New-Object "System.Text.ASCIIEncoding"
       $body = ConvertTo-Json -InputObject $value
-      $byteArray = $enc.GetBytes($body)
+      $byteArray = $enc.GetBytes($HttpBody)
       Write-Host $body -ForegroundColor Cyan
     }
     elseif ($contentType.ToLower() -eq "image/jpeg" -or $contentType.ToLower() -eq "image/png" -or $contentType.ToLower() -eq "image/gif") {
       $contentType = $contentType.ToLower()
-      $body = $value
-      $byteArray = $value
+      $HttpBody = $value;
+      $byteArray = $value;
       Write-Host "Body of the request is binary data." -ForegroundColor Cyan
     }
     $contentLength = $byteArray.Length
-    $headers = @{"Authorization"=$header;"Content-Type"=$contentType;"Content-Length"=$contentLength}
-    $result = Invoke-WebRequest -Method Put -Uri $uri -Headers $headers -Body $body
-    if($result.StatusCode -eq 204)
-    {
-      Write-Host "Update succeeded." -ForegroundColor Cyan
+    $headers = @{
+        Authorization = $header;
+        'Content-Type' = $contentType;
+        'Content-Length' = $contentLength;
+        }
+    $result = Invoke-WebRequest -Method Put -Uri $uri -Headers $headers -Body $HttpBody -ErrorVariable PutError;
+
+    if ($result.StatusCode -eq 204) {
+        Write-Verbose -Message 'Entity update succeeded.';
     }
-  }
-  else{
-    Write-Host "Not connected to an AAD tenant. First run Connect-AAD." -ForegroundColor Yellow
-  }
+    else {
+        Write-Error -Message 'Entity update was not successful. Examine the result for more information.' -TargetObject $PutError;
+    }
+
+    return $Result;
 }
