@@ -35,23 +35,37 @@ function Get-AADObject {
   return $objects
 }
 
-function Get-AADObjectById([string]$type, [string]$id) {
-  $object = $null
-  if($global:authenticationResult -ne $null){
-    $header = $authenticationResult.CreateAuthorizationHeader()
+function Get-AADObjectById {
+    [CmdletBinding()]
+    param (
+          [string] $Type
+        , [string] $Id
+    )
+ 
+    $object = $null
+
+    if (!$global:authenticationResult) {
+        Write-Error -Message 'Not connected to an Azure Active Directory tenant.' -RecommendedAction 'First run Connect-AAD.';
+    }
+
+    $AuthorizationHeader = $authenticationResult.CreateAuthorizationHeader();
     $uri = [string]::Format("https://graph.windows.net/{0}/{1}/{2}?api-version=2013-04-05",$authenticationResult.TenantId, $type.Trim(), $id.Trim())
-    Write-Host HTTP GET $uri -ForegroundColor Cyan
-    $result = Invoke-WebRequest -Method Get -Uri $uri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
+    Write-Verbose -Message ('HTTP GET {0}' -f $uri);
+
+    $HttpHeaders = @{
+        Authorization = $AuthorizationHeader;
+        "Content-Type" = "application/json";
+        }
+
+    $result = Invoke-WebRequest -Method Get -Uri $uri -Headers $HttpHeaders;
+
     if($result.StatusCode -eq 200)
     {
-      Write-Host "Get succeeded." -ForegroundColor Cyan
-      $object = (ConvertFrom-Json $result.Content)
+        Write-Verbose -Message "Get succeeded.";
+        $object = ConvertFrom-Json $result.Content;
     }
-  }
-  else{
-    Write-Host "Not connected to an AAD tenant. First run Connect-AAD." -ForegroundColor Yellow
-  }
-  return $object
+
+    return $object;
 }
 
 function New-AADObject([string]$type, [object]$object) {
