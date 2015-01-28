@@ -1,18 +1,16 @@
 function Get-AADUser {
-  [CmdletBinding()]
-  param (
-    [parameter(Mandatory=$false,
-    ValueFromPipeline=$true,
-    HelpMessage="Either the ObjectId or the UserPrincipalName of the User.")]
-    [string]
-    $Id
-  )
+    [CmdletBinding()]
+      param (
+        [parameter(Mandatory=$false, ValueFromPipeline=$true,
+        HelpMessage="Either the ObjectId or the UserPrincipalName of the User.")]
+        [string] $Id
+      )
   PROCESS {
     if($Id -ne "") {
-      Get-AADObjectById -Type "users" -Id $id
+        Get-AADObjectById -Type users -Id $id;
     }
     else {
-      Get-AADObject -Type "users"
+        Get-AADObject -Type users;
     }
   }
 }
@@ -22,92 +20,75 @@ function New-AADUser {
   param (
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="Controls whether the new user account is created enabled or disabled. The default value is true.")]
-    [bool]
-    $accountEnabled = $true, 
+    [bool] $AccountEnabled = $true, 
     
     [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The name displayed in the address book for the user.")]
-    [string]
-    $displayName, 
+    [string] $DisplayName, 
     
     [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The email alias of the new user.")]
-    [string]
-    $mailNickname, 
+    [string] $MailNickname, 
     
     [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true,
     HelpMessage="This is the user name that the new user will use for login. By convention, this should map to the user's email name. The general format is alias@domain, where domain must be present in the tenant’s collection of verified domains.")]
-    [string]
-    $userPrincipalName, 
+    [string] $UserPrincipalName, 
     
     [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The display name of the new user.")]
-    [string]
-    $password, 
+    [string] $Password, 
 
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="Controls whether the new user will be required to change their password at the next interactive login. The default value is true.")]
-    [bool]
-    $forceChangePasswordNextLogin = $true,
+    [bool] $ForceChangePasswordNextLogin = $true,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The city in which the user is located.")]
-    [string]
-    $city,
+    [string] $City,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The country/region in which the user is located.")]
-    [string]
-    $country,
+    [string] $Country,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The name for the department in which the user works.")]
-    [string]
-    $department,
+    [string] $Department,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="Indicates whether this object was synced from the on-premises directory.")]
-    [bool]
-    $dirSyncEnabled,
+    [bool] $DirSyncEnabled,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The telephone number of the user's business fax machine.")]
     [alias("Fax")]
-    [string]
-    $facsimileTelephoneNumber,
+    [string] $FacsimileTelephoneNumber,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The given name of the user.")]
     [alias("FirstName")]
-    [string]
-    $givenName,
+    [string] $GivenName,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The user’s job title.")]
-    [string]
-    $jobTitle,
+    [string] $JobTitle,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The emailaddress for the user, for example, 'jeff@contoso.onmicrosoft.com'.")]
     [alias("Email","EmailAddress")]
-    [string]
-    $mail,
+    [string] $Mail,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The primary cellular telephone number for the user.")]
-    [string]
-    $mobile,
+    [string] $Mobile,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="A list of additional email addresses for the user.")]
-    [string[]]
-    $otherMails,
+    [string[]] $OtherMails,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="Specifies password policies for the user, with one possible value being 'DisableStrongPassword', which allows weaker passwords than the default policy to be specified.")]
     [ValidateSet("DisableStrongPassword")] 
-    [string]
-    $passwordPolicies,
+    [string] $PasswordPolicies,
 
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The office location in the user's place of business.")]
@@ -184,7 +165,7 @@ function New-AADUser {
 }
 
 function Remove-AADUser {
-  [CmdletBinding()]
+    [CmdletBinding()]
   param (
     [parameter(Mandatory=$true,
     ValueFromPipeline=$true,
@@ -198,7 +179,7 @@ function Remove-AADUser {
 }
 
 function Set-AADUser {
-  [CmdletBinding()]
+    [CmdletBinding()]
   param (
     [parameter(Mandatory=$true,
     ValueFromPipeline=$true,
@@ -388,9 +369,13 @@ function Set-AADUserThumbnailPhoto {
   )
   PROCESS {
     $value = $null
-    if($PSBoundParameters.ContainsKey('ThumbnailPhotoFilePath')){$value = [System.IO.File]::ReadAllBytes($ThumbnailPhotoFilePath)}
-    else {$value = $ThumbnailPhotoByteArray}
+    if($PSBoundParameters.ContainsKey('ThumbnailPhotoFilePath')){
+        $value = [System.IO.File]::ReadAllBytes($ThumbnailPhotoFilePath);
+        }
+    else {
+        $value = $ThumbnailPhotoByteArray;
+        }
     
-    Set-AADObjectProperty -Type "users" -Id $Id -Property "thumbnailPhoto" -Value $value -IsLinked $false -ContentType "image/jpeg"
+    Set-AADObjectProperty -Type users -Id $Id -Property thumbnailPhoto -Value $value -IsLinked $false -ContentType image/jpeg;
   }
 }
