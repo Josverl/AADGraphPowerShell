@@ -4,16 +4,16 @@ $modulePath = $moduleDirPath + "\AADGraph"
 
 if (Test-Path $modulePath)
 {
-    Write-Host "Removing existing module directory under "$moduleDirPath -ForegroundColor Green
+    Write-Verbose -Message "Removing existing module directory under $moduleDirPath" -ForegroundColor Green
     Remove-Item -Path $modulePath -Recurse -Force | Out-Null
 }
 
-Write-Host "Creating module directory under "$moduleDirPath -ForegroundColor Green
+Write-Verbose -Message "Creating module directory under $moduleDirPath" -ForegroundColor Green
 New-Item -Path $modulePath -Type "Directory" -Force | Out-Null
-New-Item -Path $modulePath"\Nugets" -Type "Directory" -Force | Out-Null
-New-Item -Path $modulePath"\Cmdlets" -Type "Directory" -Force | Out-Null
+New-Item -Path $modulePath"\Nugets" -Type Directory -Force | Out-Null
+New-Item -Path $modulePath"\Cmdlets" -Type Directory -Force | Out-Null
 
-Write-Host "Installing Active Directory Authentication Library Nuget in " $modulePath"\Nugets" -ForegroundColor Green
+Write-Verbose -Message "Installing Active Directory Authentication Library Nuget in " $modulePath"\Nugets" -ForegroundColor Green
 Write-Host "Downloading nuget.exe from http://www.nuget.org/nuget.exe" -ForegroundColor Green
 $wc = New-Object System.Net.WebClient
 $wc.DownloadFile("http://www.nuget.org/nuget.exe",$modulePath + "\Nugets\nuget.exe");
