@@ -16,33 +16,46 @@ function Get-AADObject {
         'Groups', 'OAuth2PermissionGrants', 'ServicePrincipals', 'SubscribedSkus', 'TenantDetails', 'Users')]
         [string] $Type
     )
-  $objects = $null
-  if($authenticationResult -ne $null){
-    $header = $authenticationResult.CreateAuthorizationHeader()
+    $CmdletName = $MyInvocation.MyCommand.Name;
+
+    $objects = $null
+
+    if (!$authenticationResult) {
+        Write-Error -Message 'Not connected to an Azure Active Directory tenant.' -RecommendedAction 'First run Connect-AAD.';
+    }
+
+    $AuthorizationHeader = $authenticationResult.CreateAuthorizationHeader()
     $uri = [string]::Format("https://graph.windows.net/{0}/{1}?api-version=2013-04-05",$authenticationResult.TenantId, $type)
-    Write-Host HTTP GET $uri -ForegroundColor Cyan
-    $result = Invoke-WebRequest -Method Get -Uri $uri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
+
+    Write-Verbose -Message ('HTTP GET {0}' -f $uri);
+
+    $HttpHeaders = @{
+        Authorization = $AuthorizationHeader;
+        "Content-Type" = "application/json";
+        }
+
+    $result = Invoke-WebRequest -Method Get -Uri $uri -Headers $HttpHeaders;
     if($result.StatusCode -eq 200)
     {
-      Write-Host "Get succeeded." -ForegroundColor Cyan
-      $json = (ConvertFrom-Json $result.Content)
-      if($json -ne $null){$objects = $json.value}
+      Write-Verbose -Message ('{0}: Get succeeded.' -f $CmdletName);
+      $json = ConvertFrom-Json $result.Content;
     }
-  }
-  else{
-    Write-Host "Not connected to an AAD tenant. First run Connect-AAD." -ForegroundColor Yellow
-  }
-  return $objects
+
+    return $json.value;
 }
 
 function Get-AADObjectById {
     [CmdletBinding()]
     param (
+          [ValidateSet('Applications', 'Contacts', 'Devices', 'DirectoryObjects', 'DirectoryRoles', 'DirectoryRoleTemplates',
+          'Groups', 'OAuth2PermissionGrants', 'ServicePrincipals', 'SubscribedSkus', 'TenantDetails', 'Users')]
+          [Parameter(Mandatory = $true)]
           [string] $Type
-        , [string] $Id
+        , [Parameter(Mandatory = $true)]
+          [string] $Id
     )
  
-    $object = $null
+    $object = $null;
 
     if (!$global:authenticationResult) {
         Write-Error -Message 'Not connected to an Azure Active Directory tenant.' -RecommendedAction 'First run Connect-AAD.';
@@ -68,29 +81,46 @@ function Get-AADObjectById {
     return $object;
 }
 
-function New-AADObject([string]$type, [object]$object) {
+function New-AADObject {
+    [CmdletBinding()]
+    param (
+          [Parameter(Mandatory = $true)]
+          [ValidateSet('Applications', 'Contacts', 'Devices', 'DirectoryObjects', 'DirectoryRoles', 'DirectoryRoleTemplates',
+          'Groups', 'OAuth2PermissionGrants', 'ServicePrincipals', 'SubscribedSkus', 'TenantDetails', 'Users')]
+          [string] $Type
+        , [Parameter(Mandatory = $true)]
+          [object] $Object
+        )
   $newObject = $null
-  if($global:authenticationResult -ne $null) {
-    $header = $authenticationResult.CreateAuthorizationHeader()
-    $uri = [string]::Format("https://graph.windows.net/{0}/{1}?api-version=2013-04-05",$authenticationResult.TenantId, $type)
-    Write-Host HTTP POST $uri -ForegroundColor Cyan
-    $enc = New-Object "System.Text.ASCIIEncoding"
-    $body = ConvertTo-Json -InputObject $object
-    Write-Host $body -ForegroundColor Cyan
-    $byteArray = $enc.GetBytes($body)
-    $contentLength = $byteArray.Length
-    $headers = @{"Authorization"=$header;"Content-Type"="application/json";"Content-Length"=$contentLength}
-    $result = Invoke-WebRequest -Method Post -Uri $uri -Headers $headers -Body $body
-    if($result.StatusCode -eq 201)
-    {
-      Write-Host "Create succeeded." -ForegroundColor Cyan
-      $newObject = (ConvertFrom-Json $result.Content)
+    if (!$global:authenticationResult) {
+        Write-Error -Message 'Not connected to an Azure Active Directory tenant.' -RecommendedAction 'First run Connect-AAD.';
     }
-  }
-  else{
-    Write-Host "Not connected to an AAD tenant. First run Connect-AAD."
-  }
-  return $newObject
+
+    $AuthorizationHeader = $authenticationResult.CreateAuthorizationHeader()
+    $uri = [string]::Format("https://graph.windows.net/{0}/{1}?api-version=2013-04-05", $authenticationResult.TenantId, $type)
+    Write-Verbose -Message ('HTTP POST {0}' -f $uri);
+
+    $ASCIIEncoding = New-Object -TypeName System.Text.ASCIIEncoding;
+    $body = ConvertTo-Json -InputObject $object;
+
+    Write-Verbose -Message $body;
+    $byteArray = $ASCIIEncoding.GetBytes($body);
+
+    $HttpHeaders = @{
+        Authorization = $AuthorizationHeader;
+        "Content-Type" = 'application/json';
+        "Content-Length"= $byteArray.Length;
+        }
+
+    $result = Invoke-WebRequest -Method Post -Uri $uri -Headers $HttpHeaders -Body $Body
+
+    if ($result.StatusCode -eq 201)
+    {
+      Write-Verbose -Message 'Azure Active Directory object created successfully';
+      $newObject = ConvertFrom-Json $result.Content;
+    }
+
+  return $newObject;
 }
 
 function Set-AADObject([string]$type, [string]$id, [object]$object) {

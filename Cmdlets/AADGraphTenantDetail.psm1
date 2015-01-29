@@ -7,15 +7,12 @@ function Get-AADTenantDetail {
 function Set-AADTenantDetail {
   [CmdletBinding()]
   param (
-    [parameter(Mandatory=$false,
-    HelpMessage="A list of additional email addresses for the user.")]
-    [string[]]
-    $marketingNotificationMails,
-
-    [parameter(Mandatory=$false,
-    HelpMessage="A list of additional email addresses for the user.")]
-    [string[]]
-    $technicalNotificationMails
+    [Parameter(Mandatory = $false,
+    HelpMessage = "A list of additional email addresses for the user.")]
+    [string[]] $MarketingNotificationMails,
+    [parameter(Mandatory = $false,
+    HelpMessage = "A list of additional email addresses for the user.")]
+    [string[]] $TechnicalNotificationMails
   )
   PROCESS {
     $updatedTenantDetail = New-Object System.Object

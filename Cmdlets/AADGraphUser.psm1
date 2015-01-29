@@ -1,18 +1,20 @@
 function Get-AADUser {
     [CmdletBinding()]
       param (
-        [parameter(Mandatory=$false, ValueFromPipeline=$true,
+        [parameter(ParameterSetName = 'UserById', Mandatory = $false, ValueFromPipeline = $true,
         HelpMessage="Either the ObjectId or the UserPrincipalName of the User.")]
+        [ValidateNotNullOrEmpty()]
         [string] $Id
       )
-  PROCESS {
-    if($Id -ne "") {
-        Get-AADObjectById -Type users -Id $id;
+
+    PROCESS {
+        if ($PSCmdlet.ParameterSetName -eq 'UserById') {
+            Get-AADObjectById -Type users -Id $id;
+        }
+        else {
+            Get-AADObject -Type users;
+        }
     }
-    else {
-        Get-AADObject -Type users;
-    }
-  }
 }
 
 function New-AADUser {
