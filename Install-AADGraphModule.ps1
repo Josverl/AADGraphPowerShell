@@ -20,7 +20,7 @@ $WebClient.DownloadFile("http://www.nuget.org/nuget.exe",$modulePath + "\Nugets\
 $nugetDownloadExpression = $modulePath + "\Nugets\nuget.exe install Microsoft.IdentityModel.Clients.ActiveDirectory -OutputDirectory " + $modulePath + "\Nugets | out-null"
 Invoke-Expression -Command $nugetDownloadExpression;
 
-Write-Verbose -Message 'Copying module files to the module directory'';
+Write-Verbose -Message 'Copying module files to the module directory';
 Copy-Item $filesDirPath"\AADGraph.psd1" -Destination $modulePath -Force 
 Copy-Item $filesDirPath"\AADGraph.psm1" -Destination $modulePath -Force 
 Copy-Item $filesDirPath"\Cmdlets\*.psm1" -Destination $modulePath"\Cmdlets" -Force 
