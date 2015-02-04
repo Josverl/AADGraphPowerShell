@@ -33,7 +33,7 @@ function New-AADUser {
     [string] $MailNickname, 
     
     [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true,
-    HelpMessage="This is the user name that the new user will use for login. By convention, this should map to the user's email name. The general format is alias@domain, where domain must be present in the tenant’s collection of verified domains.")]
+    HelpMessage="This is the user name that the new user will use for login. By convention, this should map to the user's email name. The general format is alias@domain, where domain must be present in the tenantâ€™s collection of verified domains.")]
     [string] $UserPrincipalName, 
     
     [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true,
@@ -71,7 +71,7 @@ function New-AADUser {
     [string] $GivenName,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
-    HelpMessage="The user’s job title.")]
+    HelpMessage="The userâ€™s job title.")]
     [string] $JobTitle,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
@@ -112,7 +112,7 @@ function New-AADUser {
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The state or province in the user's postal address.")]
     [string]
-    $state,      
+    $State,      
 
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
     HelpMessage="The street address in the user's postal address.")]
@@ -137,32 +137,42 @@ function New-AADUser {
   )
   PROCESS {
     # Mandatory properties of a new User
-    $newUserPasswordProfile = "" | Select password, forceChangePasswordNextLogin
-    $newUserPasswordProfile.password = $password
-    $newUserPasswordProfile.forceChangePasswordNextLogin = $forceChangePasswordNextLogin
+    $newUserPasswordProfile = "" | Select-Object -Property password, forceChangePasswordNextLogin;
+    $newUserPasswordProfile.password = $password;
+    $newUserPasswordProfile.forceChangePasswordNextLogin = $forceChangePasswordNextLogin;
     
-    $newUser = "" | Select accountEnabled, displayName, mailNickname, passwordProfile, userPrincipalName
-    $newUser.accountEnabled = $accountEnabled
-    $newUser.displayName = $displayName
-    $newUser.mailNickname = $mailNickname
-    $newUser.passwordProfile = $newUserPasswordProfile
-    $newUser.userPrincipalName = $userPrincipalName
-           
+    $newUser = [PSCustomObject]@{
+            accountEnabled = $accountEnabled
+            displayName = $displayName
+            mailNickname = $mailNickname
+            passwordProfile = $newUserPasswordProfile
+            userPrincipalName = $userPrincipalName
+            givenName = $GivenName;
+            surname = $surname;
+            jobTitle = $JobTitle;
+            city = $City;
+            country = $Country;
+            department = $Department;
+            mail = $Mail;
+            mobile = $Mobile;
+            state = $State;
+        }
+
     #Optional parameters/properties
     foreach($psbp in $PSBoundParameters.GetEnumerator()){
       $key = $psbp.Key
       $value = $psbp.Value
-      if($key -eq "city" -or $key -eq "country" -or $key -eq "department" -or $key -eq "dirSyncEnabled" -or $key -eq "facsimileTelephoneNumber" -or `
-      $key -eq "givenName" -or $key -eq "jobTitle" -or $key -eq "mail" -or $key -eq "mobile" -or $key -eq "otherMails" -or `
+      if($key -eq "dirSyncEnabled" -or $key -eq "facsimileTelephoneNumber" `
+      -or $key -eq "otherMails" -or `
       $key -eq "passwordPolicies" -or $key -eq "physicalDeliveryOfficeName" -or $key -eq "postalCode" -or $key -eq "preferredLanguage" -or `
-      $key -eq "state" -or $key -eq "streetAddress" -or $key -eq "surname" -or $key -eq "telephoneNumber"  -or $key -eq "usageLocation") {
+      $key -eq "streetAddress" -or $key -eq "telephoneNumber"  -or $key -eq "usageLocation") {
         if($value -ne "" -and $value -ne $null){
-          Add-Member -InputObject $newUser –MemberType NoteProperty –Name $key –Value $value
+          Add-Member -InputObject $newUser â€“MemberType NoteProperty â€“Name $key â€“Value $value
         }
       }
     }
     
-    New-AADObject -Type users -Object $newUser
+    New-AADObject -Type users -Object $newUser;
   }
 }
 
