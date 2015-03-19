@@ -68,8 +68,8 @@ function New-AADAdminPermissionGrantIfNeeded {
     )
     PROCESS {
         $grants = New-Object System.Object
-        if($Silent) {$grants = Get-AADObject -Type 'oAuth2PermissionGrants' -Silent}
-        else {$grants = Get-AADObject -Type 'oAuth2PermissionGrants'}
+        if($Silent) {$grants = Get-AADObject -Type 'oauth2PermissionGrants' -Silent}
+        else {$grants = Get-AADObject -Type 'oauth2PermissionGrants'}
 
         foreach($grant in $grants) {
             if($grant.clientId -eq $ServicePrincipalObjectId -and $grant.consentType -eq 'AllPrincipals') {
@@ -82,10 +82,10 @@ function New-AADAdminPermissionGrantIfNeeded {
 
         $grant = New-Object System.Object
         Add-Member -InputObject $grant -MemberType NoteProperty -Name 'clientId' -Value $ServicePrincipalObjectId
-        Add-Member -InputObject $grant -MemberType NoteProperty -Name 'clientId' -Value $ServicePrincipalObjectId
+        Add-Member -InputObject $grant -MemberType NoteProperty -Name 'consentType' -Value 'AllPrincipals'
 
-        if ($Silent) {New-AADObject -Type 'oAuth2PermissionGrants' -Object $grant -Silent}
-        else {New-AADObject -Type 'oAuth2PermissionGrants' -Object $grant}
+        if ($Silent) {New-AADObject -Type 'oauth2PermissionGrants' -Object $grant -Silent}
+        else {New-AADObject -Type 'oauth2PermissionGrants' -Object $grant}
   }
 }
 
@@ -193,9 +193,9 @@ function New-AADIdp {
         Add-Member -InputObject $newPolicy -MemberType NoteProperty -Name 'tenantDefaultPolicy' -Value '1'
     }
     elseif($AddToNewPolicy) {
-        Add-Member -InputObject $newPolicy -MemberType NoteProperty -Name 'tenantDefaultPolicy' -Value '0'
+        # Dont add a tenantDefaultPolicy Flag
     }
-    else {
+    elseif($existingPolicy.tenantDefaultPolicy) {
         Add-Member -InputObject $newPolicy -MemberType NoteProperty -Name 'tenantDefaultPolicy' -Value $existingPolicy.tenantDefaultPolicy
     }
 
@@ -211,23 +211,41 @@ function New-AADIdp {
     }
 
     # PolicyDetail
-    $policyDetailFormat = "{`"ClaimIssuancePolicy`":{`"Version`":1, `"AllowPassThruUsers`":`"true`"}, `"IdentityProviderPolicy`": [{policyChunks}]}"
-    $policyChunkFormat = "{{`"Version`":1, `"IssuerURI`": `"{0}`", `"Protocol`": `"OAuth2`", `"Metadata`": [{{Key: `"IdpType`", Value: `"{1}`"}}, {{Key: `"client_id`", Value: `"{2}`"}}], `"CryptographicKeys`": [{{Id:`"client_secret`", StorageReferenceId:`"{3}`"}}], `"OutputClaims`": []}}, "
-    
-    $policyChunks = ''
-    if($existingPolicy -and !($AddToNewPolicy)) {
-        $chunksKey = "`"IdentityProviderPolicy`": ["
-        $chunksStartToEnd = $existingPolicy.policyDetail.Substring($existingPolicy.policyDetail.IndexOf($chunksKey) + $chunksKey.Length)
-        $policyChunks = $chunksStartToEnd.Substring(0, $chunksStartToEnd.Length-2) 
+    $policyDetail = New-Object System.Object
+    $claimIssuancePolicy = New-Object System.Object
+    Add-Member -InputObject $claimIssuancePolicy -MemberType NoteProperty -Name 'Version' -Value 1
+    Add-Member -InputObject $claimIssuancePolicy -MemberType NoteProperty -Name 'AllowPassThruUsers' -Value $true
+    Add-Member -InputObject $policyDetail -MemberType NoteProperty -Name 'ClaimIssuancePolicy' -Value $claimIssuancePolicy
+
+    $idpPolicy = @()
+    if ($existingPolicy -and !($AddToNewPolicy)) {
+        $existingPolicyDetail = ConvertFrom-Json -InputObject $existingPolicy.policyDetail[0]
+        $idpPolicy = $existingPolicyDetail.IdentityProviderPolicy
     }
+    
+        # TODO: Prevent the same IDP/Client_id tuple from being used twice.
 
-        # TODO: Prevent the same IDP/Client_Id Tuple from being added twice.
+    $newIdpType = New-Object System.Object
+    Add-Member -InputObject $newIdpType -MemberType NoteProperty -Name 'Key' -Value 'IdpType'
+    Add-Member -InputObject $newIdpType -MemberType NoteProperty -Name 'Value' -Value $idpType
+    $newClientId = New-Object System.Object
+    Add-Member -InputObject $newClientId -MemberType NoteProperty -Name 'Key' -Value 'client_id'
+    Add-Member -InputObject $newClientId -MemberType NoteProperty -Name 'Value' -Value $ClientId
+    $newCryptoKey = New-Object System.Object
+    Add-Member -InputObject $newCryptoKey -MemberType NoteProperty -Name 'Id' -Value 'client_secret'
+    Add-Member -InputObject $newCryptoKey -MemberType NoteProperty -Name 'StorageReferenceId' -Value $clientSecretStorageKey
+    $newPolicyChunk = New-Object System.Object
+    Add-Member -InputObject $newPolicyChunk -MemberType NoteProperty -Name 'Version' -Value 1
+    Add-Member -InputObject $newPolicyChunk -MemberType NoteProperty -Name 'IssuerURI' -Value $issuerUri
+    Add-Member -InputObject $newPolicyChunk -MemberType NoteProperty -Name 'Protocol' -Value 'OAuth2'
+    Add-Member -InputObject $newPolicyChunk -MemberType NoteProperty -Name 'Metadata' -Value @($newIdpType, $newClientId)
+    Add-Member -InputObject $newPolicyChunk -MemberType NoteProperty -Name 'CryptographicKeys' -Value @($newCryptoKey)
+    Add-Member -InputObject $newPolicyChunk -MemberType NoteProperty -Name 'OutputClaims' -Value @()
 
-    Write-Host $policyChunkFormat -ForegroundColor Yellow
-    $policyChunks += [string]::Format($policyChunkFormat, $issuerUri, $idpType, $ClientId, $clientSecretStorageKey)
-    $policyDetail = $policyDetailFormat.Replace("{policyChunks}", $policyChunks)
-    Add-Member -InputObject $newPolicy -MemberType NoteProperty -Name 'policyDetail' -Value @($policyDetail)
-
+    $idpPolicy += $newPolicyChunk
+    Add-Member -InputObject $policyDetail -MemberType NoteProperty -Name 'IdentityProviderPolicy' -Value $idpPolicy
+    $serializedPolicyDetail = ConvertTo-Json -InputObject $policyDetail -Depth 10 -Compress
+    Add-Member -InputObject $newPolicy -MemberType NoteProperty -Name 'policyDetail' -Value @($serializedPolicyDetail)
 
     # KeyCredentials
     $keyCredentials = @()
@@ -261,8 +279,8 @@ function New-AADIdp {
 
     # Create Admin Delegation
     if($ServicePrincipal) {
-        if($Silent) {Create-AdminPermissionGrantIfNeeded -ServicePrincipalObjectId $ServicePrincipal -Silent}
-        else {Create-AdminPermissionGrantIfNeeded -ServicePrincipalObjectId $ServicePrincipal}
+        if($Silent) {New-AADAdminPermissionGrantIfNeeded -ServicePrincipalObjectId $ServicePrincipal -Silent}
+        else {New-AADAdminPermissionGrantIfNeeded -ServicePrincipalObjectId $ServicePrincipal}
     }
   }
 }
@@ -316,28 +334,32 @@ function Remove-AADIdp {
     }
 
     # Remove the correct Policy Chunk
-    $policyDetailFormat = "{`"ClaimIssuancePolicy`":{`"Version`":1, `"AllowPassThruUsers`":`"true`"}, `"IdentityProviderPolicy`": [{policyChunks}]}"
+    $policyDetail = ConvertFrom-Json -InputObject $policy.policyDetail[0]
     $storageRefId = ''
-    $chunksKey = "`"IdentityProviderPolicy`": ["
-    $policyChunks = $policy.policyDetail.Substring($policy.policyDetail.IndexOf($chunksKey) + $chunksKey.Length)
-    $policyChunks = $policyChunks.Substring(0, $policyChunks.Length-2)
-    $chunkKey = "{`"Version"
-    $separator = @($chunkKey)
-    $options = [System.StringSplitOptions]::RemoveEmptyEntries
-    $policyChunks = $policyChunks.Split($separator, $options)
-    $reconstructedChunks = ''
+    $reconstructedIdpPolicy = @()
     $found = $false
-    foreach($chunk in $policyChunks) {
-        if ($chunk.Contains("Key: `"client_id`", Value: `"" + $ClientId + "`"") -and $chunk.Contains("Key: `"IdpType`", Value: `"" + $idpType + "`"")) {
+    foreach($chunk in $policyDetail.IdentityProviderPolicy) {
+        $isIdp = $false
+        $isClientId = $false
+        foreach ($kvp in $chunk.Metadata) {
+            if($kvp.Key -eq 'IdpType' -and $kvp.Value -eq $idpType) {
+                $isIdp = $true
+            }
+            elseif($kvp.Key -eq 'client_id' -and $kvp.Value -eq $ClientId) {
+                $isClientId = $true
+            }
+        }
+        if($isIdp -and $isClientId) {
             $found = $true
-            $storageRefKey = "StorageReferenceId:`""
-            $storageRefId = $chunk.Substring($chunk.IndexOf($storageRefKey) + $storageRefKey.Length, 36)
+            $storageRefId = $chunk.CryptographicKeys[0].StorageReferenceId
             continue
         }
-        $reconstructedChunks += ($chunkKey + $chunk)
+        $reconstructedIdpPolicy += $chunk
     }
     if($found) {
-        $policy.policyDetail = $policyDetailFormat.Replace("{policyChunks}", $reconstructedChunks)
+        $policyDetail.IdentityProviderPolicy = $reconstructedIdpPolicy
+        $serializedPolicyDetail = ConvertTo-Json -InputObject $policyDetail -Depth 10 -Compress
+        $policy.policyDetail = @($serializedPolicyDetail)
     }
     else {
         Write-Host "Client Id not found in default policy or specified policy." -ForegroundColor Yellow
@@ -345,29 +367,14 @@ function Remove-AADIdp {
     }
 
     # Remove the associated Key
-    Write-Host $policy.keyCredentials.GetType().FullName 
-    Write-Host 'STOP'
-    Write-Host $policy.KeyCredentials -ForegroundColor Yellow
- 
-    
-    
-    $resconstructedKeys = @()
-    foreach($keyCred in $policy.keyCredentials) {
-        Write-Host 'STOP'
-        Write-Host $keyCred.keyId -ForegroundColor Yellow
- 
+    $existingCredentials = $policy.keyCredentials
+    $policy.keyCredentials = @()
+    foreach($keyCred in $existingCredentials) {
         if($keyCred.keyId -eq $storageRefId) {
-            Write-Host 'STOP'
-            Write-Host 'Equal!' -ForegroundColor Yellow
             continue
         }
-        $reconstructedKeys += $keyCred
+        $policy.keyCredentials += $keyCred
     }
-    $policy.KeyCredentials = $resconstructedKeys
-
-    Write-Host $reconstructedKeys -ForegroundColor Yellow
-    Write-Host 'STOP' -ForegroundColor Yellow
-    Write-Host $policy.keyCredentials -ForegroundColor Yellow
 
     # Update the Policy, or Delete if all IDPs are removed
     if($policy.keyCredentials.Length -eq 0) {
