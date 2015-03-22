@@ -48,45 +48,8 @@ function Get-TenantDefaultPolicy {
   }
 }
 
-function Assign-Policy {
+function Enable-SocialIdp {
     # TODO
-}
-
-function New-AADAdminPermissionGrantIfNeeded {
-    [CmdletBinding()]
-    param (   
-    [parameter(Mandatory=$false,
-    HelpMessage="Suppress console output.")]
-    [switch]
-    $Silent,
-
-    [parameter(Mandatory=$true,
-    HelpMessage="The Object Id of the service principal for which tenant-wide consent will be recorded.")]
-    [string]
-    $ServicePrincipalObjectId
-
-    )
-    PROCESS {
-        $grants = New-Object System.Object
-        if($Silent) {$grants = Get-AADObject -Type 'oauth2PermissionGrants' -Silent}
-        else {$grants = Get-AADObject -Type 'oauth2PermissionGrants'}
-
-        foreach($grant in $grants) {
-            if($grant.clientId -eq $ServicePrincipalObjectId -and $grant.consentType -eq 'AllPrincipals') {
-                if(!$Silent) {
-                    Write-Host "Admin consent to application already exists." -ForegroundColor Green
-                }
-                return 
-            }
-        }
-
-        $grant = New-Object System.Object
-        Add-Member -InputObject $grant -MemberType NoteProperty -Name 'clientId' -Value $ServicePrincipalObjectId
-        Add-Member -InputObject $grant -MemberType NoteProperty -Name 'consentType' -Value 'AllPrincipals'
-
-        if ($Silent) {New-AADObject -Type 'oauth2PermissionGrants' -Object $grant -Silent}
-        else {New-AADObject -Type 'oauth2PermissionGrants' -Object $grant}
-  }
 }
 
 function New-AADIdp {
@@ -127,11 +90,6 @@ function New-AADIdp {
     HelpMessage="The Object Id of the IDP Policy to update with new IDP.")]
     [string]
     $PolicyId,
-
-    [parameter(Mandatory=$false,
-    HelpMessage="The Object Id of the service principal that will use the IDP for sign in.")]
-    [string]
-    $ServicePrincipal,
 
     [parameter(Mandatory=$false,
     HelpMessage="Suppress console output.")]
@@ -411,9 +369,7 @@ function Map-IdpToIdpType([string]$Idp) {
     }
 }
 
-# TODO: Put in own file w/full Creation & Update
-
-function Get-AADoAuth2PermissionGrant {
+function New-AADAdminPermissionGrantIfNeeded {
     [CmdletBinding()]
     param (   
     [parameter(Mandatory=$false,
@@ -421,40 +377,40 @@ function Get-AADoAuth2PermissionGrant {
     [switch]
     $Silent,
 
-    [parameter(Mandatory=$false,
-    HelpMessage="The Object Id of the oAuth2PermissionGrant.")]
+    [parameter(Mandatory=$true,
+    HelpMessage="The Object Id of the service principal for which tenant-wide consent will be recorded.")]
     [string]
-    $ObjectId
+    $ServicePrincipalObjectId
 
     )
     PROCESS {
-        if($ObjectId -ne $null -and $ObjectId -ne "") {
-        if($Silent){Get-AADObjectById -Type "oAuth2PermissionGrants" -Id $ObjectId -Silent}
-        else{Get-AADObjectById -Type "oAuth2PermissionGrants" -Id $ObjectId}
+        $grants = New-Object System.Object
+        if($Silent) {$grants = Get-AADObject -Type 'oauth2PermissionGrants' -Silent}
+        else {$grants = Get-AADObject -Type 'oauth2PermissionGrants'}
+
+        $graphResourceId = Get-GraphResourceId
+
+        foreach($grant in $grants) {
+            if($grant.clientId -eq $ServicePrincipalObjectId -and $grant.consentType -eq 'AllPrincipals' -and $grant.resourceId -eq $graphResourceId) {
+                $scope = ''
+                if ($grant.scope) {$scope = $grant.scope}
+                if (!$scope.Contains('user_impersonation')) {$scope += ' user_impersonation'}
+                if(!$Silent) {Set-AADoAuth2PermissionGrant -PermissionGrantObjectId $grant.objectId -Scope $scope -Silent}
+                else {Set-AADoAuth2PermissionGrant -PermissionGrantObjectId $grant.objectId -Scope $scope}
+                return 
+            }
         }
-        else {
-            if($Silent){Get-AADObject -Type "oAuth2PermissionGrants" -Silent}
-            else{Get-AADObject -Type "oAuth2PermissionGrants"}
-        }
+
+        if ($Silent) {New-AADoAuth2PermissionGrant -ServicePrincipalObjectId $ServicePrincipalObjectId -ResourceObjectId $graphResourceId -Scope 'user_impersonation' -ConsentType 'AllPrincipals' -Silent}
+        else {New-AADoAuth2PermissionGrant -ServicePrincipalObjectId $ServicePrincipalObjectId -ResourceObjectId $graphResourceId -Scope 'user_impersonation' -ConsentType 'AllPrincipals'}
   }
 }
 
-function Remove-AADoAuth2PermissionGrant {
-    [CmdletBinding()]
-    param (
-    [parameter(Mandatory=$true,
-    ValueFromPipeline=$true,
-    HelpMessage="The ObjectId of the oAuth2PermissionGrant")]
-    [string]
-    $Id,
-    
-    [parameter(Mandatory=$false,
-    HelpMessage="Suppress console output.")]
-    [switch]
-    $Silent
-  )
-  PROCESS {
-    if($Silent){Remove-AADObject -Type "oAuth2PermissionGrants" -Id $id -Silent}
-    else{Remove-AADObject -Type "oAuth2PermissionGrants" -Id $id}
-  }
+function Get-GraphResourceId() {
+    switch($global:aadGPoShEnv.ToLower()) {
+        'ppe' {return '97ceba2e-60aa-4b82-968f-d0a1c17570c1'}
+        # TODO: Other environments
+        default {return $null}
+    }
 }
+
