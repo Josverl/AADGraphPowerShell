@@ -9,7 +9,7 @@ function Get-AADObject([string]$Type, [string]$Query="", [switch] $All, [switch]
     $result = Invoke-WebRequest -Method Get -Uri $uri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
     if($result.StatusCode -eq 200){
       if(-not $Silent){
-        Write-Host "Get succeeded." -ForegroundColor Cyan
+        Write-Verbose "Get succeeded." -ForegroundColor Cyan
       }
       $json = (ConvertFrom-Json $result.Content)
       if($json -ne $null){
