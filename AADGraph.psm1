@@ -1,61 +1,132 @@
+<#
+.Synopsis
+   Load Adal Libraries 
+.DESCRIPTION
+   Load the ADFAL libraries for use wirt the AAD Graph API.
+   requires that the ADAL libraries are present , and will download the ADAL libvraries using NUGET if not avaialble
+.EXAMPLE
+   Load-ActiveDirectoryAuthenticationLibrary
+#>
 function Load-ActiveDirectoryAuthenticationLibrary(){
-  $moduleDirPath = [Environment]::GetFolderPath("MyDocuments") + "\WindowsPowerShell\Modules"
-  $modulePath = $moduleDirPath + "\AADGraph"
-  if(-not (Test-Path ($modulePath+"\Nugets"))) {New-Item -Path ($modulePath+"\Nugets") -ItemType "Directory" | out-null}
-  $adalPackageDirectories = (Get-ChildItem -Path ($modulePath+"\Nugets") -Filter "Microsoft.IdentityModel.Clients.ActiveDirectory*" -Directory)
-  if($adalPackageDirectories.Length -eq 0){
-    Write-Host "Active Directory Authentication Library Nuget doesn't exist. Downloading now ..." -ForegroundColor Yellow
-    if(-not(Test-Path ($modulePath + "\Nugets\nuget.exe")))
-    {
-      Write-Host "nuget.exe not found. Downloading from http://www.nuget.org/nuget.exe ..." -ForegroundColor Yellow
-      $wc = New-Object System.Net.WebClient
-      $wc.DownloadFile("http://www.nuget.org/nuget.exe",$modulePath + "\Nugets\nuget.exe");
+[CmdletBinding()]
+[OutputType([boolean])]
+
+    $moduleDirPath = [Environment]::GetFolderPath("MyDocuments") + "\WindowsPowerShell\Modules"
+    $modulePath = $moduleDirPath + "\AADGraph"
+    #check for nugets folder
+    if(-not (Test-Path ($modulePath+"\Nugets"))) {New-Item -Path ($modulePath+"\Nugets") -ItemType "Directory" | out-null}
+
+    $adalPackageDirectories = (Get-ChildItem -Path ($modulePath+"\Nugets") -Filter "Microsoft.IdentityModel.Clients.ActiveDirectory*" -Directory)
+    #go get ADAL if its not downloaded yet
+    if($adalPackageDirectories.Length -eq 0){
+        Write-verbose "Active Directory Authentication Library Nuget doesn't exist. Downloading now ..." 
+        if(-not(Test-Path ($modulePath + "\Nugets\nuget.exe")))
+        {   #wget nuget 
+            Write-verbose "nuget.exe not found. Downloading from http://www.nuget.org/nuget.exe ..." 
+            $wc = New-Object System.Net.WebClient
+            $wc.DownloadFile("http://www.nuget.org/nuget.exe",$modulePath + "\Nugets\nuget.exe");
+        }
+        $nugetDownloadExpression = $modulePath + "\Nugets\nuget.exe install Microsoft.IdentityModel.Clients.ActiveDirectory -Version 2.14.201151115 -OutputDirectory " + $modulePath + "\Nugets | out-null"
+        Invoke-Expression $nugetDownloadExpression
     }
-    $nugetDownloadExpression = $modulePath + "\Nugets\nuget.exe install Microsoft.IdentityModel.Clients.ActiveDirectory -Version 2.14.201151115 -OutputDirectory " + $modulePath + "\Nugets | out-null"
-    Invoke-Expression $nugetDownloadExpression
-  }
-  $adalPackageDirectories = (Get-ChildItem -Path ($modulePath+"\Nugets") -Filter "Microsoft.IdentityModel.Clients.ActiveDirectory*" -Directory)
-  $ADAL_Assembly = (Get-ChildItem "Microsoft.IdentityModel.Clients.ActiveDirectory.dll" -Path $adalPackageDirectories[$adalPackageDirectories.length-1].FullName -Recurse)
-  $ADAL_WindowsForms_Assembly = (Get-ChildItem "Microsoft.IdentityModel.Clients.ActiveDirectory.WindowsForms.dll" -Path $adalPackageDirectories[$adalPackageDirectories.length-1].FullName -Recurse)
-  if($ADAL_Assembly.Length -gt 0 -and $ADAL_WindowsForms_Assembly.Length -gt 0){
-    Write-Host "Loading ADAL Assemblies ..." -ForegroundColor Green
-    [System.Reflection.Assembly]::LoadFrom($ADAL_Assembly[0].FullName) | out-null
-    [System.Reflection.Assembly]::LoadFrom($ADAL_WindowsForms_Assembly.FullName) | out-null
-    return $true
-  }
-  else{
-    Write-Host "Fixing Active Directory Authentication Library package directories ..." -ForegroundColor Yellow
-    $adalPackageDirectories | Remove-Item -Recurse -Force | Out-Null
-    Write-Host "Not able to load ADAL assembly. Delete the Nugets folder under" $modulePath ", restart PowerShell session and try again ..."
-    return $false
-  }
+    #load ADAL libs from downloaded package 
+    $adalPackageDirectories = (Get-ChildItem -Path ($modulePath+"\Nugets") -Filter "Microsoft.IdentityModel.Clients.ActiveDirectory*" -Directory)
+    #Load the libraries from the last downloaded package 
+    $ADAL_Assembly = (Get-ChildItem "Microsoft.IdentityModel.Clients.ActiveDirectory.dll" -Path $adalPackageDirectories[$adalPackageDirectories.length-1].FullName -Recurse)
+    $ADAL_WindowsForms_Assembly = (Get-ChildItem "Microsoft.IdentityModel.Clients.ActiveDirectory.WindowsForms.dll" -Path $adalPackageDirectories[$adalPackageDirectories.length-1].FullName -Recurse)
+    #
+    if($ADAL_Assembly.Length -gt 0 -and $ADAL_WindowsForms_Assembly.Length -gt 0){
+        Write-verbose "Loading ADAL Assemblies ..." 
+        [System.Reflection.Assembly]::LoadFrom($ADAL_Assembly[0].FullName) | out-null
+        [System.Reflection.Assembly]::LoadFrom($ADAL_WindowsForms_Assembly.FullName) | out-null
+        return $true
+    }
+    else{
+        Write-Verbose "Fixing Active Directory Authentication Library package directories ..." 
+        $adalPackageDirectories | Remove-Item -Recurse -Force | Out-Null
+        Write-Warning "Not able to load ADAL assembly. Delete the Nugets folder under" $modulePath ", restart PowerShell session and try again ..."
+        return $false
+    }
 }
 
-function Get-AuthenticationResult($tenant = "common", $env="prod"){
-  $clientId = "1950a258-227b-4e31-a9cf-717495945fc2"
-  $redirectUri = "urn:ietf:wg:oauth:2.0:oob"
-  $resourceClientId = "00000002-0000-0000-c000-000000000000"
-  $resourceAppIdURI = "https://graph.windows.net/"
-  $authority = "https://login.windows.net/" + $tenant
-  if($env.ToLower() -eq "ppe"){$resourceAppIdURI = "https://graph.ppe.windows.net/"; $authority = "https://login.windows-ppe.net/" + $tenant}
-  elseif($env.ToLower() -eq "china"){$resourceAppIdURI = "https://graph.chinacloudapi.cn/"; $authority = "https://login.chinacloudapi.cn/" + $tenant}
-  $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority,$false
-  $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always)
-  return $authResult
+function Get-AuthenticationResult{
+[CmdletBinding()]
+#    [OutputType([int])]
+Param(
+    #Tenant directory
+    [Parameter(Mandatory=$true,Position=0,HelpMessage="Tenant directory or registered domain")][string]
+    $tenant = "contoso.onmicrosoft.com", 
+    #environment or production tier 
+    [Parameter(Position=1)][string]
+    $env="prod",
+    #credentials to authenticate
+    [Parameter(Position=2)][System.Management.Automation.PSCredential]
+    $Credentials = $null
+)
+    
+    $clientId = "1950a258-227b-4e31-a9cf-717495945fc2"
+    $redirectUri = "urn:ietf:wg:oauth:2.0:oob"
+    $resourceClientId = "00000002-0000-0000-c000-000000000000"
+    
+    #Use the appropriate endpoints
+    switch ($env.ToLower())
+    {
+        'ppe'   {$resourceAppIdURI = "https://graph.ppe.windows.net/"; $authority = "https://login.windows-ppe.net/" + $tenant}
+        'china' {$resourceAppIdURI = "https://graph.chinacloudapi.cn/"; $authority = "https://login.chinacloudapi.cn/" + $tenant}
+        Default {$resourceAppIdURI = "https://graph.windows.net/"; $authority = "https://login.windows.net/" + $tenant}
+    }
+    $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority,$false
+    #Aquires security token from the authority
+    if ( -Not $credentials ) {
+        # If Always, asks service to show user the authentication page which gives them chance to authenticate as a different user.
+        $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always)
+        
+    } else {
+        # transform credential into the required type
+        $cred2 = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserCredential" -ArgumentList @( $Credentials.UserName , $Credentials.Password )
+
+        #Call the silent overload     
+        $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $Cred2) 
+    }
+    return $authResult
 }
 
-function Connect-AAD ($tenant = "common", $env="prod", $graphVer="1.5") {
-  PROCESS {
-    $global:aadGPoShAuthResult = $null
-    $global:aadGPoShEnv = $env
-    $global:aadGPoShGraphVer = $graphVer
-    $global:aadGPoShGraphUrl = "https://graph.windows.net/"
-    if($env.ToLower() -eq "ppe") {$global:aadGPoShGraphUrl = "https://graph.ppe.windows.net/"}
-    elseif($env.ToLower() -eq "china") {$global:aadGPoShGraphUrl = "https://graph.chinacloudapi.cn/"}
-    $global:aadGPoShAuthResult = Get-AuthenticationResult -Tenant $tenant -Env $env
-  }
+<#
+.Synopsis
+   Connect and authenticate to AAD via Grap
+.Notes 
+    #Added $credential parameter 
+#>
+function Connect-AAD{
+[CmdletBinding()]
+Param ( 
+    #Tenant directory
+    [Parameter(Mandatory=$true,Position=0,HelpMessage="Tenant directory or registered domain")][string]
+    $tenant = "contoso.onmicrosoft.com", 
+    #environment or production tier 
+    [Parameter(Position=1)][string]
+    $env="prod",
+    #Version of graph API to use ( 1.5,1.6,beta)  
+    [Parameter(Position=2)][string]
+    $graphVer="1.6", 
+    #credentials to authenticate
+    [Parameter(Position=3)][System.Management.Automation.PSCredential]
+    $Credentials = $null
+) 
+    PROCESS {
+        $global:aadGPoShAuthResult = $null
+        $global:aadGPoShEnv = $env
+        $global:aadGPoShGraphVer = $graphVer
+        #Use the appropriate endpoints
+        switch ($env.ToLower())
+        {
+            'ppe'   {$global:aadGPoShGraphUrl = "https://graph.ppe.windows.net/"}
+            'china' {$global:aadGPoShGraphUrl = "https://graph.chinacloudapi.cn/"}
+            Default {$global:aadGPoShGraphUrl = "https://graph.windows.net/"}
+        }
+        $global:aadGPoShAuthResult = Get-AuthenticationResult -Tenant $tenant -Env $env -Credentials $Credentials
+    }
 }
-
 
 function Execute-AADQuery ($Base, $HTTPVerb, $Query, $Data, [switch] $Silent) {
   $return = $null
