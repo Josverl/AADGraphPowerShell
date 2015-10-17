@@ -10,12 +10,15 @@ if(-not $myDocumentsModuleFolderIsInPSModulePath){
   [Environment]::SetEnvironmentVariable("PSModulePath",$newPSModulePath, "User")
 }
 
+#find location where this install script is stored
 $filesDirPath = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+#and the destimation path for the module
 $moduleDirPath = [Environment]::GetFolderPath("MyDocuments") + "\WindowsPowerShell\Modules"
 $modulePath = $moduleDirPath + "\AADGraph"
 
 if (Test-Path $modulePath)
-{
+{    
+    #give upgrade notice
     Write-Host "Removing existing module directory under "$moduleDirPath -ForegroundColor Green
     Remove-Item -Path $modulePath -Recurse -Force | Out-Null
 }
@@ -37,6 +40,6 @@ Copy-Item $filesDirPath"\AADGraph.psd1" -Destination $modulePath -Force
 Copy-Item $filesDirPath"\AADGraph.psm1" -Destination $modulePath -Force 
 Copy-Item $filesDirPath"\Cmdlets\*.psm1" -Destination $modulePath"\Cmdlets" -Force 
 
-Import-Module AADGraph
+Import-Module AADGraph -DisableNameChecking -Force
 
 Get-Command -Module AADGraph
