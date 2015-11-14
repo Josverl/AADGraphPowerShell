@@ -10,7 +10,13 @@ function Get-AADUser {
     [parameter(Mandatory=$false,
     HelpMessage="Suppress console output.")]
     [switch]
-    $Silent
+    $Silent,
+
+    [parameter(Mandatory=$false,
+    HelpMessage="get all objects.")]
+    [switch]
+    $All
+
   )
   PROCESS {
     if($Id -ne $null -and $Id -ne "") {
@@ -18,8 +24,8 @@ function Get-AADUser {
       else{Get-AADObjectById -Type "users" -Id $id}
     }
     else {
-      if($Silent){Get-AADObject -Type "users" -Silent}
-      else{Get-AADObject -Type "users"}
+      if($Silent){Get-AADObject -Type "users" -Silent -All:$all }
+      else{Get-AADObject -Type "users" -All:$all}
     }
   }
 }
