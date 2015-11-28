@@ -1,11 +1,17 @@
 #JV - Add Progress indicator 
-function Get-AADObject([string]$Type, [string]$Query="", [switch] $All, [switch] $Silent) {
+#JV - add page size
+function Get-AADObject([string]$Type, [string]$Query="", [switch] $All, [switch] $Silent, $PageSize = 100  ) {
   $objects = $null
   $Page=0 #Page Counter
+  #variable page size between 1 - 999 
+  #Suppress top=100 as that is the default
+  $TopString = if($PageSize -eq 100 -or $PageSize -lt 1 -or $PageSize -ge 999) {""}else{"&$"+"top=$PageSize"}
+
   $activity = "Get {0}" -f $Type
   if($global:aadGPoShAuthResult -ne $null){
     $header = $global:aadGPoShAuthResult.CreateAuthorizationHeader()
-    $uri = [string]::Format("{0}{1}/{2}?api-version={3}{4}",$global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId,$Type.Trim(),$global:aadGPoShGraphVer,$Query)
+    
+    $uri = [string]::Format("{0}{1}/{2}?api-version={3}{4}{5}",$global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId,$Type.Trim(),$global:aadGPoShGraphVer,$Query,$TopString)
     if(-not $Silent){
       Write-Host HTTP GET $uri -ForegroundColor Cyan
     }
@@ -29,7 +35,8 @@ function Get-AADObject([string]$Type, [string]$Query="", [switch] $All, [switch]
                 Write-Verbose "Getting the next page of results." 
                 Write-Verbose "HTTP GET $($uri + "&" + $nextLink.Split('?')[1])"
               }
-              $result = Invoke-WebRequest -Method Get -Uri ($uri + "&" + $nextLink.Split('?')[1]) -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
+              # subsequent pages are the same size as the first one
+              $result = Invoke-WebRequest -Method Get -Uri ($uri + "&" + $nextLink.Split('?')[1] ) -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
               if($result.StatusCode -eq 200){
                 $json = (ConvertFrom-Json $result.Content)
                 if($json -ne $null){
