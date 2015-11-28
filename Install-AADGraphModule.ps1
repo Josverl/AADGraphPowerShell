@@ -1,4 +1,5 @@
 
+
 #Find if PS Module Folder is in the Path 
 $moduleDirPath = [Environment]::GetFolderPath("MyDocuments") + "\WindowsPowerShell\Modules"
 $myDocumentsModuleFolderIsInPSModulePath = $false
@@ -35,8 +36,8 @@ New-Item -Path $modulePath"\Cmdlets" -Type "Directory" -Force | Out-Null
 If ($Host.Version.Major -ge 5) {
     #Make use of Nuget ain Powershell 5
     import-Module PackageManagement 
-    UnInstall-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
-    Install-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force -AllowPrereleaseVersions
+    #UnInstall-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
+    Install-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
 
 } else { 
     #Old Style download 
