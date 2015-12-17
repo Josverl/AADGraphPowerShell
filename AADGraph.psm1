@@ -187,4 +187,4 @@ function Execute-AADQuery ($Base, $HTTPVerb, $Query, $Data, [switch] $Silent) {
   return $return
 }
 
-Load-ActiveDirectoryAuthenticationLibrary
+Load-ActiveDirectoryAuthenticationLibrary 

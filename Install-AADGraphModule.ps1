@@ -1,5 +1,4 @@
 
-
 #Find if PS Module Folder is in the Path 
 $moduleDirPath = [Environment]::GetFolderPath("MyDocuments") + "\WindowsPowerShell\Modules"
 $myDocumentsModuleFolderIsInPSModulePath = $false
