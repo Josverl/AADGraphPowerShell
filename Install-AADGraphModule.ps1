@@ -32,13 +32,24 @@ New-Item -Path $modulePath -Type "Directory" -Force | Out-Null
 New-Item -Path $modulePath"\Nugets" -Type "Directory" -Force | Out-Null
 New-Item -Path $modulePath"\Cmdlets" -Type "Directory" -Force | Out-Null
 
+<#  Removed due to issues in WRM 5.0 
 If ($Host.Version.Major -ge 5) {
+#>
+if ($false){
     #Make use of Nuget in Powershell 5
     import-Module PackageManagement 
+    if (-not $(get-PackageProvider -Name nuget)) {
+        install-PackageProvider -Name nuget
+    }
+
+    Install-Package -Name Microsoft.IdentityModel.Clients.ActiveDirectory -ProviderName NuGet -Destination "$modulePath\Nugets" 
+    
+    Microsoft.IdentityModel.Clients.ActiveDirectory 
     #UnInstall-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
     Install-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
 
 } else { 
+
     #Old Style download 
     Write-Host "Installing Active Directory Authentication Library Nuget in " $modulePath"\Nugets" -ForegroundColor Green
     Write-Host "Downloading nuget.exe from http://www.nuget.org/nuget.exe" -ForegroundColor Green
