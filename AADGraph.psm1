@@ -19,15 +19,24 @@ function Load-ActiveDirectoryAuthenticationLibrary(){
     $adalPackageDirectories = (Get-ChildItem -Path ($modulePath+"\Nugets") -Filter "Microsoft.IdentityModel.Clients.ActiveDirectory*" -Directory)
     #go get ADAL if its not downloaded yet
     if($adalPackageDirectories.Length -eq 0){
-        Write-verbose "Active Directory Authentication Library Nuget doesn't exist. Downloading now ..." 
-        if(-not(Test-Path ($modulePath + "\Nugets\nuget.exe")))
-        {   #wget nuget 
-            Write-verbose "nuget.exe not found. Downloading from http://www.nuget.org/nuget.exe ..." 
-            $wc = New-Object System.Net.WebClient
-            $wc.DownloadFile("http://www.nuget.org/nuget.exe",$modulePath + "\Nugets\nuget.exe");
+        If ($Host.Version.Major -ge 5) {
+            #Make use of Nuget in Powershell 5
+            import-Module PackageManagement 
+            #UnInstall-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
+            Install-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
+
+        } else { 
+            #Old Style download 
+            Write-verbose "Active Directory Authentication Library Nuget doesn't exist. Downloading now ..." 
+            if(-not(Test-Path ($modulePath + "\Nugets\nuget.exe")))
+            {   #wget nuget 
+                Write-verbose "nuget.exe not found. Downloading from http://www.nuget.org/nuget.exe ..." 
+                $wc = New-Object System.Net.WebClient
+                $wc.DownloadFile("http://www.nuget.org/nuget.exe",$modulePath + "\Nugets\nuget.exe");
+            }
+            $nugetDownloadExpression = $modulePath + "\Nugets\nuget.exe install Microsoft.IdentityModel.Clients.ActiveDirectory -Version 2.14.201151115 -OutputDirectory " + $modulePath + "\Nugets | out-null"
+            Invoke-Expression $nugetDownloadExpression
         }
-        $nugetDownloadExpression = $modulePath + "\Nugets\nuget.exe install Microsoft.IdentityModel.Clients.ActiveDirectory -Version 2.14.201151115 -OutputDirectory " + $modulePath + "\Nugets | out-null"
-        Invoke-Expression $nugetDownloadExpression
     }
     #load ADAL libs from downloaded package 
     $adalPackageDirectories = (Get-ChildItem -Path ($modulePath+"\Nugets") -Filter "Microsoft.IdentityModel.Clients.ActiveDirectory*" -Directory)
@@ -178,4 +187,4 @@ function Execute-AADQuery ($Base, $HTTPVerb, $Query, $Data, [switch] $Silent) {
   return $return
 }
 
-Load-ActiveDirectoryAuthenticationLibrary
+Load-ActiveDirectoryAuthenticationLibrary 
