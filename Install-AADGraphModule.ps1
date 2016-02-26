@@ -43,10 +43,9 @@ if ($false){
     }
 
     Install-Package -Name Microsoft.IdentityModel.Clients.ActiveDirectory -ProviderName NuGet -Destination "$modulePath\Nugets" 
-    
     Microsoft.IdentityModel.Clients.ActiveDirectory 
     #UnInstall-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
-    Install-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
+
 
 } else { 
 
@@ -54,10 +53,20 @@ if ($false){
     Write-Host "Installing Active Directory Authentication Library Nuget in " $modulePath"\Nugets" -ForegroundColor Green
     Write-Host "Downloading nuget.exe from http://www.nuget.org/nuget.exe" -ForegroundColor Green
     $wc = New-Object System.Net.WebClient
-    $wc.DownloadFile("http://www.nuget.org/nuget.exe",$modulePath + "\Nugets\nuget.exe");
+    $nuget_exe = $modulePath + "\Nugets\nuget.exe"
+    $nuget_mod = $modulePath + "\Nugets" 
 
-    $nugetDownloadExpression = $modulePath + "\Nugets\nuget.exe install Microsoft.IdentityModel.Clients.ActiveDirectory -OutputDirectory " + $modulePath + "\Nugets | out-null"
-    Invoke-Expression $nugetDownloadExpression
+    $wc.DownloadFile("http://www.nuget.org/nuget.exe",$nuget_exe);
+    # Path may contains spaces 
+    
+    $args = 'install Microsoft.IdentityModel.Clients.ActiveDirectory -OutputDirectory "' +  $nuget_mod  + '"'
+    Start-Process -FilePath $nuget_exe -ArgumentList $args -Wait -WindowStyle Minimized
+
+
+    Invoke-Expression ( $DQuote + $modulePath + "\Nugets\nuget.exe" + " install Microsoft.IdentityModel.Clients.ActiveDirectory -OutputDirectory " + $modulePath + "\Nugets" + " " + $DQuote )
+
+    #$nugetDownloadExpression = $DQuote + $modulePath + "\Nugets\nuget.exe" + $DQuote + " install Microsoft.IdentityModel.Clients.ActiveDirectory -OutputDirectory " + $DQuote + $modulePath + "\Nugets" + $DQuote + " | out-null"
+    #Invoke-Expression $nugetDownloadExpression
 }
 Write-Host "Copying module files to the module directory" -ForegroundColor Green
 Copy-Item $filesDirPath"\AADGraph.psd1" -Destination $modulePath -Force 

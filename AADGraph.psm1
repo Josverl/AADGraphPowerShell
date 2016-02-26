@@ -91,6 +91,26 @@ Param(
         $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always)
         
     } else {
+        
+        
+  <#      
+        #Assumed Name , required to prompt
+        $UserIdentifyer = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier"  -ArgumentList  "josverl2@microsoft.com",  "OptionalDisplayableId"
+        $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always, $UserIdentifyer)
+
+        #Known Name , required to prompt
+        $UserIdentifyer = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier"  -ArgumentList  "josverl@microsoft.com",  "RequiredDisplayableId"
+        $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always, $UserIdentifyer)
+
+        #Known Name , Auto prompt
+        $UserIdentifyer = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier"  -ArgumentList  "josverl@microsoft.com",  "RequiredDisplayableId"
+        $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Auto, $UserIdentifyer)
+
+        #Known Name , Never Prompt
+        $UserIdentifyer = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier"  -ArgumentList  "josverl@microsoft.com",  "RequiredDisplayableId"
+        $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Never, $UserIdentifyer)
+#>
+
         # transform credential into the required type
         $cred2 = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserCredential" -ArgumentList @( $Credentials.UserName , $Credentials.Password )
 
