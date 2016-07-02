@@ -1,4 +1,4 @@
-function Get-AADTenantDetail {
+﻿function Get-AADTenantDetail {
   [CmdletBinding()]
   param (
     [parameter(Mandatory=$false,

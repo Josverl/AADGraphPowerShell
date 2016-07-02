@@ -1,4 +1,4 @@
-#JV - Add Progress indicator 
+﻿#JV - Add Progress indicator 
 #JV - add page size
 function Get-AADObject([string]$Type, [string]$Query="", [switch] $All, [switch] $Silent, $PageSize = 100  ) {
   $objects = $null
