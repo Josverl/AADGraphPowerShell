@@ -1,4 +1,4 @@
-function Get-AADUser {
+﻿function Get-AADUser {
     [CmdletBinding()]
       param (
         [parameter(ParameterSetName = 'UserById', Mandatory = $false, ValueFromPipeline = $true,
@@ -33,7 +33,7 @@ function New-AADUser {
     [string] $MailNickname, 
     
     [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true,
-    HelpMessage="This is the user name that the new user will use for login. By convention, this should map to the user's email name. The general format is alias@domain, where domain must be present in the tenant’s collection of verified domains.")]
+    HelpMessage="This is the user name that the new user will use for login. By convention, this should map to the user's email name. The general format is alias@domain, where domain must be present in the tenantâ€™s collection of verified domains.")]
     [string] $UserPrincipalName, 
     
     [parameter(Mandatory=$true, ValueFromPipelineByPropertyName=$true,
@@ -71,7 +71,7 @@ function New-AADUser {
     [string] $GivenName,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
-    HelpMessage="The user’s job title.")]
+    HelpMessage="The userâ€™s job title.")]
     [string] $JobTitle,
     
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
@@ -167,7 +167,7 @@ function New-AADUser {
       $key -eq "passwordPolicies" -or $key -eq "physicalDeliveryOfficeName" -or $key -eq "postalCode" -or $key -eq "preferredLanguage" -or `
       $key -eq "streetAddress" -or $key -eq "telephoneNumber"  -or $key -eq "usageLocation") {
         if($value -ne "" -and $value -ne $null){
-          Add-Member -InputObject $newUser –MemberType NoteProperty –Name $key –Value $value
+          Add-Member -InputObject $newUser â€“MemberType NoteProperty â€“Name $key â€“Value $value
         }
       }
     }

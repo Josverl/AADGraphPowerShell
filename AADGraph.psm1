@@ -1,4 +1,4 @@
-function Load-ActiveDirectoryAuthenticationLibrary {
+﻿function Load-ActiveDirectoryAuthenticationLibrary {
     [CmdletBinding()]
     param (
     )

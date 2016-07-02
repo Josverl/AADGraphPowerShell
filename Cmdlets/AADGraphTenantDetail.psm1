@@ -1,4 +1,4 @@
-function Get-AADTenantDetail {
+﻿function Get-AADTenantDetail {
   PROCESS {
     Get-AADObject -Type tenantDetails;
   }

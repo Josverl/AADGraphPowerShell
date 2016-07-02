@@ -1,4 +1,4 @@
-$filesDirPath = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
+﻿$filesDirPath = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 $moduleDirPath = ($ENV:PSModulePath -split ';')[0]
 $modulePath = $moduleDirPath + "\AADGraph"
 

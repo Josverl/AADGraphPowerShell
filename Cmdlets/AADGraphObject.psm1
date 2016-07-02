@@ -1,4 +1,4 @@
-function Get-AADObject {
+﻿function Get-AADObject {
     <#
     .Synopsis
     Retrieves an entity from Microsoft Azure Active Directory (AAD).
