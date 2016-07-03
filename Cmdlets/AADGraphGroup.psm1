@@ -20,10 +20,10 @@ Param (
 )
     ## POST https://graph.windows.net/myorganization/isMemberOf?api-version 
     $newObject = $null
-    if($global:aadGPoShAuthResult -ne $null) {
-        $header = $global:aadGPoShAuthResult.CreateAuthorizationHeader()
+    if($global:AuthenticationResult -ne $null) {
+        $header = $global:AuthenticationResult.CreateAuthorizationHeader()
         $uri = [string]::Format("{0}{1}/{2}?api-version={3}",
-                    $global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId,
+                    $global:aadGPoShGraphUrl,$global:AuthenticationResult.TenantId,
                     "isMemberOf",
                     $global:aadGPoShGraphVer)
 

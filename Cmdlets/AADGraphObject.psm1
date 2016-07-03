@@ -1,17 +1,20 @@
 ﻿#JV - Add Progress indicator 
 #JV - add page size
-function Get-AADObject([string]$Type, [string]$Query="", [switch] $All, [switch] $Silent, $PageSize = 100  ) {
+# ToDo : use verbosepreferences 
+function Get-AADObject{
+[CmdletBinding()]
+param ([string]$Type, [string]$Query="", [switch] $All, [switch] $Silent, $PageSize = 100  ) 
   $objects = $null
   $Page=0 #Page Counter
   #variable page size between 1 - 999 
   #Suppress top=100 as that is the default
-  $TopString = if($PageSize -eq 100 -or $PageSize -lt 1 -or $PageSize -ge 999) {""}else{"&$"+"top=$PageSize"}
+  $TopString = if($PageSize -eq 100 -or $PageSize -lt 1 -or $PageSize -ge 999) {""} else {"&$"+"top=$PageSize"}
 
   $activity = "Get {0}" -f $Type
-  if($global:aadGPoShAuthResult -ne $null){
-    $header = $global:aadGPoShAuthResult.CreateAuthorizationHeader()
+  if($global:AuthenticationResult -ne $null){
+    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
     
-    $uri = [string]::Format("{0}{1}/{2}?api-version={3}{4}{5}",$global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId,$Type.Trim(),$global:aadGPoShGraphVer,$Query,$TopString)
+    $uri = [string]::Format("{0}{1}/{2}?api-version={3}{4}{5}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(),$global:GraphAPIVersion,$Query,$TopString)
     if(-not $Silent){
       Write-Host HTTP GET $uri -ForegroundColor Cyan
     }
@@ -60,11 +63,14 @@ function Get-AADObject([string]$Type, [string]$Query="", [switch] $All, [switch]
   return $objects
 }
 
-function Get-AADObjectById([string]$Type, [string]$Id, [switch] $Silent) {
+# get a single AAD Object 
+function Get-AADObjectById  {
+param([string]$Type, [string]$Id, [switch] $Silent)
+
   $object = $null
-  if($global:aadGPoShAuthResult -ne $null){
-    $header = $global:aadGPoShAuthResult.CreateAuthorizationHeader()
-    $uri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId,$Type.Trim(), $Id.Trim(),$global:aadGPoShGraphVer)
+  if($global:AuthenticationResult -ne $null){
+    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
+    $uri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
     if(-not $Silent){
       Write-Host HTTP GET $uri -ForegroundColor Cyan
     }
@@ -85,9 +91,9 @@ function Get-AADObjectById([string]$Type, [string]$Id, [switch] $Silent) {
 
 function New-AADObject([string]$Type, [object]$Object, [switch] $Silent) {
   $newObject = $null
-  if($global:aadGPoShAuthResult -ne $null) {
-    $header = $global:aadGPoShAuthResult.CreateAuthorizationHeader()
-    $uri = [string]::Format("{0}{1}/{2}?api-version={3}",$global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId,$Type.Trim(),$global:aadGPoShGraphVer)
+  if($global:AuthenticationResult -ne $null) {
+    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
+    $uri = [string]::Format("{0}{1}/{2}?api-version={3}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(),$global:GraphAPIVersion)
     if(-not $Silent){
       Write-Host HTTP POST $uri -ForegroundColor Cyan
     }
@@ -114,9 +120,9 @@ function New-AADObject([string]$Type, [object]$Object, [switch] $Silent) {
 }
 
 function Set-AADObject([string]$Type, [string]$Id, [object]$Object, [switch] $Silent) {
-  if($global:aadGPoShAuthResult -ne $null) {
-    $header = $global:aadGPoShAuthResult.CreateAuthorizationHeader()
-    $uri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId,$Type.Trim(), $Id.Trim(),$global:aadGPoShGraphVer)
+  if($global:AuthenticationResult -ne $null) {
+    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
+    $uri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
     if(-not $Silent){
       Write-Host HTTP PATCH $uri -ForegroundColor Cyan
     }
@@ -141,9 +147,9 @@ function Set-AADObject([string]$Type, [string]$Id, [object]$Object, [switch] $Si
 }
 
 function Remove-AADObject([string]$Type, [string]$Id, [switch] $Silent) {
-  if($global:aadGPoShAuthResult -ne $null) {
-    $header = $global:aadGPoShAuthResult.CreateAuthorizationHeader()
-    $uri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId,$Type.Trim(), $Id.Trim(),$global:aadGPoShGraphVer)
+  if($global:AuthenticationResult -ne $null) {
+    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
+    $uri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
     if(-not $Silent){
       Write-Host HTTP DELETE $uri -ForegroundColor Cyan
     }
@@ -162,14 +168,14 @@ function Remove-AADObject([string]$Type, [string]$Id, [switch] $Silent) {
 
 function Get-AADLinkedObject([string]$Type, [string] $Id, [string]$Relationship, [switch]$GetLinksOnly, [switch]$Binary, [switch]$All, [switch]$Silent) {
   $objects = $null
-  if($global:aadGPoShAuthResult -ne $null){
-    $header = $global:aadGPoShAuthResult.CreateAuthorizationHeader()
+  if($global:AuthenticationResult -ne $null){
+    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
     $uri = $null
     if($GetLinksOnly) {
-      $uri = [string]::Format("{0}{1}/{2}/{3}/`$links/{4}?api-version={5}",$global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId, $Type, $Id, $Relationship,$global:aadGPoShGraphVer)
+      $uri = [string]::Format("{0}{1}/{2}/{3}/`$links/{4}?api-version={5}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId, $Type, $Id, $Relationship,$global:GraphAPIVersion)
     }
     else {
-      $uri = [string]::Format("{0}{1}/{2}/{3}/{4}?api-version={5}",$global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId, $Type, $Id, $Relationship,$global:aadGPoShGraphVer)
+      $uri = [string]::Format("{0}{1}/{2}/{3}/{4}?api-version={5}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId, $Type, $Id, $Relationship,$global:GraphAPIVersion)
     }
     if(-not $Silent) {
       Write-Host HTTP GET $uri -ForegroundColor Cyan
@@ -220,14 +226,14 @@ function Get-AADLinkedObject([string]$Type, [string] $Id, [string]$Relationship,
 }
 
 function Set-AADObjectProperty([string]$Type, [string] $Id, [string]$Property, [object]$Value, [bool]$IsLinked, [string]$ContentType, [ValidateSet("PUT", "POST", ignorecase=$true)][string]$HTTPMethod = "PUT", [switch] $Silent) {
-  if($global:aadGPoShAuthResult -ne $null) {
-    $header = $global:aadGPoShAuthResult.CreateAuthorizationHeader()
+  if($global:AuthenticationResult -ne $null) {
+    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
     $uri = $null
     if($IsLinked) {
-      $uri = [string]::Format('{0}{1}/{2}/{3}/$links/{4}?api-version={5}',$global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId,$Type, $Id, $Property,$global:aadGPoShGraphVer)
+      $uri = [string]::Format('{0}{1}/{2}/{3}/$links/{4}?api-version={5}',$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type, $Id, $Property,$global:GraphAPIVersion)
     }
     else {
-      $uri = [string]::Format('{0}{1}/{2}/{3}/{4}?api-version={5}',$global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId,$Type, $Id, $Property,$global:aadGPoShGraphVer)
+      $uri = [string]::Format('{0}{1}/{2}/{3}/{4}?api-version={5}',$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type, $Id, $Property,$global:GraphAPIVersion)
     }
     
     if(-not $Silent){
