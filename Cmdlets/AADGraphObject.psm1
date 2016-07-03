@@ -89,6 +89,7 @@ param([string]$Type, [string]$Id, [switch] $Silent)
   return $object
 }
 
+#create a new object in AAD 
 function New-AADObject([string]$Type, [object]$Object, [switch] $Silent) {
   $newObject = $null
   if($global:AuthenticationResult -ne $null) {
@@ -119,6 +120,7 @@ function New-AADObject([string]$Type, [object]$Object, [switch] $Silent) {
   return $newObject
 }
 
+#Update / chnage an existing AAD object
 function Set-AADObject([string]$Type, [string]$Id, [object]$Object, [switch] $Silent) {
   if($global:AuthenticationResult -ne $null) {
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()
@@ -146,6 +148,7 @@ function Set-AADObject([string]$Type, [string]$Id, [object]$Object, [switch] $Si
   }
 }
 
+#Remove / delete an object from the directory 
 function Remove-AADObject([string]$Type, [string]$Id, [switch] $Silent) {
   if($global:AuthenticationResult -ne $null) {
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()

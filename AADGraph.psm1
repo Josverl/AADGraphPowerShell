@@ -150,26 +150,26 @@ Param (
     $Credentials = $null
 ) 
     PROCESS {
-        $global:aadGPoShAuthResult = $null
+        $global:AuthenticationResult = $null
         $global:aadGPoShEnv = $env
-        $global:aadGPoShGraphVer = $graphVer
+        $global:GraphAPIVersion = $graphVer
         #Use the appropriate endpoints
         switch ($env.ToLower())
         {
-            'ppe'   {$global:aadGPoShGraphUrl = "https://graph.ppe.windows.net/"}
-            'china' {$global:aadGPoShGraphUrl = "https://graph.chinacloudapi.cn/"}
-            Default {$global:aadGPoShGraphUrl = "https://graph.windows.net/"}
+            'ppe'   {$global:aadGraphUrl = "https://graph.ppe.windows.net/"}
+            'china' {$global:aadGraphUrl = "https://graph.chinacloudapi.cn/"}
+            Default {$global:aadGraphUrl = "https://graph.windows.net/"}
         }
-        $global:aadGPoShAuthResult = Get-AuthenticationResult -Tenant $tenant -Env $env -Credentials $Credentials
+        $global:AuthenticationResult = Get-AuthenticationResult -Tenant $tenant -Env $env -Credentials $Credentials
     }
 }
 
 function Execute-AADQuery ($Base, $HTTPVerb, $Query, $Data, [switch] $Silent) {
   $return = $null
-  if($global:aadGPoShAuthResult -ne $null) {
-    $header = $global:aadGPoShAuthResult.CreateAuthorizationHeader()
+  if($global:AuthenticationResult -ne $null) {
+    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
     $headers = @{"Authorization"=$header;"Content-Type"="application/json"}
-    $uri = [string]::Format("{0}{1}/{2}?api-version={3}{4}",$global:aadGPoShGraphUrl,$global:aadGPoShAuthResult.TenantId, $base, $global:aadGPoShGraphVer, $query)
+    $uri = [string]::Format("{0}{1}/{2}?api-version={3}{4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId, $base, $global:GraphAPIVersion, $query)
     if($data -ne $null){
       $enc = New-Object "System.Text.ASCIIEncoding"
       $body = ConvertTo-Json -InputObject $Data -Depth 10

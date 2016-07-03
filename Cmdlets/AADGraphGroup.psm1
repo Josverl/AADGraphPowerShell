@@ -2,7 +2,7 @@
 <#
 .Synopsis
    Check if a user is a member of a group
-    
+   
 .EXAMPLE
     $Grp = Get-AADObject -Type "groups" -Query "Generation-y"
     $result = Test-AADisMemberof -groupId $grp.objectId -memberId $li.objectId
@@ -23,9 +23,9 @@ Param (
     if($global:AuthenticationResult -ne $null) {
         $header = $global:AuthenticationResult.CreateAuthorizationHeader()
         $uri = [string]::Format("{0}{1}/{2}?api-version={3}",
-                    $global:aadGPoShGraphUrl,$global:AuthenticationResult.TenantId,
+                    $global:aadGraphUrl,$global:AuthenticationResult.TenantId,
                     "isMemberOf",
-                    $global:aadGPoShGraphVer)
+                    $global:GraphAPIVersion)
 
         Write-verbose "HTTP POST - isMemberOf " 
         $enc = New-Object "System.Text.ASCIIEncoding"
