@@ -2,7 +2,7 @@
 <#
 .Synopsis
    Check if a user is a member of a group
-   
+  
 .EXAMPLE
     $Grp = Get-AADObject -Type "groups" -Query "Generation-y"
     $result = Test-AADisMemberof -groupId $grp.objectId -memberId $li.objectId
