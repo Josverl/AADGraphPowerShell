@@ -7,14 +7,20 @@
 .EXAMPLE
    Load-ActiveDirectoryAuthenticationLibrary
 #>
-function Load-ActiveDirectoryAuthenticationLibrary(){
+function Load-ActiveDirectoryAuthenticationLibrary(){ 
 [CmdletBinding()]
 [OutputType([boolean])]
+param ()
 
-    $moduleDirPath = [Environment]::GetFolderPath("MyDocuments") + "\WindowsPowerShell\Modules"
-    $modulePath = $moduleDirPath + "\AADGraph"
-    #check for nugets folder
-    if(-not (Test-Path ($modulePath+"\Nugets"))) {New-Item -Path ($modulePath+"\Nugets") -ItemType "Directory" | out-null}
+  $moduleDirPath = ($ENV:PSModulePath -split ';')[0]
+  $modulePath = $moduleDirPath + "\AADGraph"
+  $NuGetDestination = $modulePath + "\Nugets\nuget.exe";
+  #check for nugets folder
+
+    if(-not (Test-Path ($modulePath+"\Nugets"))) {
+        Write-Verbose -Message 'NuGet path doesn''t exist. Creating ...';
+        New-Item -Path ($modulePath+"\Nugets") -ItemType "Directory" | out-null
+    }
 
     $adalPackageDirectories = (Get-ChildItem -Path ($modulePath+"\Nugets") -Filter "Microsoft.IdentityModel.Clients.ActiveDirectory*" -Directory)
     #go get ADAL if its not downloaded yet
@@ -24,43 +30,42 @@ function Load-ActiveDirectoryAuthenticationLibrary(){
             import-Module PackageManagement 
             #UnInstall-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
             Install-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
-
         } else { 
             #Old Style download 
-            Write-verbose "Active Directory Authentication Library Nuget doesn't exist. Downloading now ..." 
-            if(-not(Test-Path ($modulePath + "\Nugets\nuget.exe")))
-            {   #wget nuget 
-                Write-verbose "nuget.exe not found. Downloading from http://www.nuget.org/nuget.exe ..." 
-                $wc = New-Object System.Net.WebClient
-                $wc.DownloadFile("http://www.nuget.org/nuget.exe",$modulePath + "\Nugets\nuget.exe");
-            }
-            $nugetDownloadExpression = $modulePath + "\Nugets\nuget.exe install Microsoft.IdentityModel.Clients.ActiveDirectory -Version 2.14.201151115 -OutputDirectory " + $modulePath + "\Nugets | out-null"
-            Invoke-Expression $nugetDownloadExpression
-        }
+    Write-Verbose -Message "Active Directory Authentication Library Nuget doesn't exist. Downloading now ...";
+    if(-not(Test-Path $NuGetDestination))
+    {
+      Write-Verbose -Message "nuget.exe not found. Downloading from http://www.nuget.org/nuget.exe ...";
+      $NuGetSource = "http://www.nuget.org/nuget.exe";
+
+      $WebClient = New-Object -TypeName System.Net.WebClient;
+      $WebClient.DownloadFile($NuGetSource, $NuGetDestination);
     }
-    #load ADAL libs from downloaded package 
-    $adalPackageDirectories = (Get-ChildItem -Path ($modulePath+"\Nugets") -Filter "Microsoft.IdentityModel.Clients.ActiveDirectory*" -Directory)
-    #Load the libraries from the last downloaded package 
-    $ADAL_Assembly = (Get-ChildItem "Microsoft.IdentityModel.Clients.ActiveDirectory.dll" -Path $adalPackageDirectories[$adalPackageDirectories.length-1].FullName -Recurse)
-    $ADAL_WindowsForms_Assembly = (Get-ChildItem "Microsoft.IdentityModel.Clients.ActiveDirectory.WindowsForms.dll" -Path $adalPackageDirectories[$adalPackageDirectories.length-1].FullName -Recurse)
-    #
-    if($ADAL_Assembly.Length -gt 0 -and $ADAL_WindowsForms_Assembly.Length -gt 0){
-        Write-verbose "Loading ADAL Assemblies ..." 
-        [System.Reflection.Assembly]::LoadFrom($ADAL_Assembly[0].FullName) | out-null
-        [System.Reflection.Assembly]::LoadFrom($ADAL_WindowsForms_Assembly.FullName) | out-null
-        return $true
-    }
-    else{
-        Write-Verbose "Fixing Active Directory Authentication Library package directories ..." 
-        $adalPackageDirectories | Remove-Item -Recurse -Force | Out-Null
-        Write-Warning "Not able to load ADAL assembly. Delete the Nugets folder under" $modulePath ", restart PowerShell session and try again ..."
-        return $false
-    }
+    $nugetDownloadExpression = $modulePath + "\Nugets\nuget.exe install Microsoft.IdentityModel.Clients.ActiveDirectory -OutputDirectory " + $modulePath + "\Nugets | out-null"
+    Invoke-Expression -Command $nugetDownloadExpression;
+  }
+  #load ADAL libs from downloaded package 
+  $adalPackageDirectories = Get-ChildItem -Path ($modulePath+"\Nugets") -Filter Microsoft.IdentityModel.Clients.ActiveDirectory* -Directory;
+  #Load the libraries from the last downloaded package
+  $ADAL_Assembly = (Get-ChildItem "Microsoft.IdentityModel.Clients.ActiveDirectory.dll" -Path $adalPackageDirectories[$adalPackageDirectories.length-1].FullName -Recurse)
+  $ADAL_WindowsForms_Assembly = (Get-ChildItem "Microsoft.IdentityModel.Clients.ActiveDirectory.WindowsForms.dll" -Path $adalPackageDirectories[$adalPackageDirectories.length-1].FullName -Recurse)
+  if($ADAL_Assembly.Length -gt 0 -and $ADAL_WindowsForms_Assembly.Length -gt 0){
+    Write-Host "Loading ADAL Assemblies ..." -ForegroundColor Green
+    Add-Type -Path $ADAL_Assembly.FullName | Out-Null;
+    Add-Type -Path $ADAL_WindowsForms_Assembly.FullName | Out-Null;
+    return $true
+  }
+  else{
+    Write-Verbose -Message "Fixing Active Directory Authentication Library (ADAL) package directories ...";
+    $adalPackageDirectories | Remove-Item -Recurse -Force | Out-Null;
+    Write-Error -Message "Not able to load ADAL assembly. Delete the Nugets folder under $modulePath." -RecommendedAction 'Restart PowerShell session and try again ...';
+    return $false;
+  }
 }
 
-function Get-AuthenticationResult{
+function Get-AuthenticationResult {
 [CmdletBinding()]
-#    [OutputType([int])]
+#[OutputType([int])]
 Param(
     #Tenant directory
     [Parameter(Mandatory=$true,Position=0,HelpMessage="Tenant directory or registered domain")][string]
@@ -71,28 +76,30 @@ Param(
     #credentials to authenticate
     [Parameter(Position=2)][System.Management.Automation.PSCredential]
     $Credentials = $null
-)
-    
+    )
     $clientId = "1950a258-227b-4e31-a9cf-717495945fc2"
-    $redirectUri = "urn:ietf:wg:oauth:2.0:oob"
+    [uri]$redirectUri = [uri]"urn:ietf:wg:oauth:2.0:oob"
     $resourceClientId = "00000002-0000-0000-c000-000000000000"
-    
+    $resourceAppIdURI = "https://graph.windows.net";
+    $authority = "https://login.windows.net/common";
     #Use the appropriate endpoints
     switch ($env.ToLower())
     {
-        'ppe'   {$resourceAppIdURI = "https://graph.ppe.windows.net/"; $authority = "https://login.windows-ppe.net/" + $tenant}
-        'china' {$resourceAppIdURI = "https://graph.chinacloudapi.cn/"; $authority = "https://login.chinacloudapi.cn/" + $tenant}
-        Default {$resourceAppIdURI = "https://graph.windows.net/"; $authority = "https://login.windows.net/" + $tenant}
+        'ppe'   { $resourceAppIdURI = "https://graph.ppe.windows.net/"; 
+                  $authority = "https://login.windows-ppe.net/" + $tenant}
+        'china' { $resourceAppIdURI = "https://graph.chinacloudapi.cn/";
+                  $authority = "https://login.chinacloudapi.cn/" + $tenant}
+        Default { $resourceAppIdURI = "https://graph.windows.net/"; 
+                  $authority = "https://login.windows.net/" + $tenant}
     }
-    $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority,$false
+  
+    $authContext = New-Object -TypeName Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext -ArgumentList $authority, $false;
     #Aquires security token from the authority
     if ( -Not $credentials ) {
         # If Always, asks service to show user the authentication page which gives them chance to authenticate as a different user.
         $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always)
         
-    } else {
-        
-        
+    } else {           
   <#      
         #Assumed Name , required to prompt
         $UserIdentifyer = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier"  -ArgumentList  "josverl2@microsoft.com",  "OptionalDisplayableId"
@@ -110,24 +117,24 @@ Param(
         $UserIdentifyer = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier"  -ArgumentList  "josverl@microsoft.com",  "RequiredDisplayableId"
         $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Never, $UserIdentifyer)
 #>
-
         # transform credential into the required type
         $cred2 = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserCredential" -ArgumentList @( $Credentials.UserName , $Credentials.Password )
 
         #Call the silent overload     
         $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $Cred2) 
     }
+
     return $authResult
 }
 
 <#
 .Synopsis
-   Connect and authenticate to AAD via Grap
+   Connect and authenticate to AAD via Graph
 .Notes 
     #Added $credential parameter 
 #>
-function Connect-AAD{
-[CmdletBinding()]
+function Connect-AAD {
+    [CmdletBinding()]
 Param ( 
     #Tenant directory
     [Parameter(Mandatory=$true,Position=0,HelpMessage="Tenant directory or registered domain")][string]
@@ -207,4 +214,5 @@ function Execute-AADQuery ($Base, $HTTPVerb, $Query, $Data, [switch] $Silent) {
   return $return
 }
 
-Load-ActiveDirectoryAuthenticationLibrary 
+
+Load-ActiveDirectoryAuthenticationLibrary
