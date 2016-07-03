@@ -2,8 +2,8 @@
 .Synopsis
    Load Adal Libraries 
 .DESCRIPTION
-   Load the ADFAL libraries for use wirt the AAD Graph API.
-   requires that the ADAL libraries are present , and will download the ADAL libvraries using NUGET if not avaialble
+   Load the ADFAL libraries for use with the AAD Graph API.
+   requires that the ADAL libraries are present , and will download the ADAL libvraries using PowershellGet/NUGET if not avaialble
 .EXAMPLE
    Load-ActiveDirectoryAuthenticationLibrary
 #>
