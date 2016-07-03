@@ -1,31 +1,25 @@
 ﻿function Get-AADUser {
   [CmdletBinding()]
   param (
-    [parameter(Mandatory=$false,
-    ValueFromPipeline=$true,
-    HelpMessage="Either the ObjectId or the UserPrincipalName of the User.")]
-    [string]
-    $Id,
-    
+    [parameter( ParameterSetName = 'UserById',
+                Mandatory=$false,
+                ValueFromPipeline=$true,
+                HelpMessage="Either the ObjectId or the UserPrincipalName of the User.")]
+    [ValidateNotNullOrEmpty()]
+    [string] $Id,
+   
     [parameter(Mandatory=$false,
     HelpMessage="Suppress console output.")]
-    [switch]
-    $Silent,
-
+    [switch]$Silent,
     [parameter(Mandatory=$false,
     HelpMessage="get all objects.")]
-    [switch]
-    $All
-
+    [switch]$All
   )
   PROCESS {
-    if($Id -ne $null -and $Id -ne "") {
-      if($Silent){Get-AADObjectById -Type "users" -Id $id -Silent}
-      else{Get-AADObjectById -Type "users" -Id $id}
-    }
-    else {
-      if($Silent){Get-AADObject -Type "users" -Silent -All:$all }
-      else{Get-AADObject -Type "users" -All:$all}
+    if ($PSCmdlet.ParameterSetName -eq 'UserById') {
+        Get-AADObjectById -Type "users" -Id $id -Silent:$Silent
+    } else {
+        Get-AADObject -Type "users" -Silent:$Silent -All:$all 
     }
   }
 }
@@ -167,21 +161,30 @@ function New-AADUser {
     
     [parameter(Mandatory=$false,
     HelpMessage="Suppress console output.")]
-    [switch]
-    $Silent
+    [switch] $Silent
   )
   PROCESS {
     # Mandatory properties of a new User
-    $newUserPasswordProfile = "" | Select password, forceChangePasswordNextLogin
+    $newUserPasswordProfile = "" | Select-Object -Property password, forceChangePasswordNextLogin
     $newUserPasswordProfile.password = $password
     $newUserPasswordProfile.forceChangePasswordNextLogin = $forceChangePasswordNextLogin
     
-    $newUser = "" | Select accountEnabled, displayName, mailNickname, passwordProfile, userPrincipalName
-    $newUser.accountEnabled = $accountEnabled
-    $newUser.displayName = $displayName
-    $newUser.mailNickname = $mailNickname
-    $newUser.passwordProfile = $newUserPasswordProfile
-    $newUser.userPrincipalName = $userPrincipalName
+    $newUser = [PSCustomObject]@{
+            accountEnabled = $accountEnabled
+            displayName = $displayName
+            mailNickname = $mailNickname
+            passwordProfile = $newUserPasswordProfile
+            userPrincipalName = $userPrincipalName
+            givenName = $GivenName;
+            surname = $surname;
+            jobTitle = $JobTitle;
+            city = $City;
+            country = $Country;
+            department = $Department;
+            mail = $Mail;
+            mobile = $Mobile;
+            state = $State;
+        }
            
     #Optional parameters/properties
     foreach($psbp in $PSBoundParameters.GetEnumerator()){
@@ -196,8 +199,7 @@ function New-AADUser {
         }
       }
     }
-    if($Silent){New-AADObject -Type users -Object $newUser -Silent}
-    else{New-AADObject -Type users -Object $newUser}
+    New-AADObject -Type users -Object $newUser -Silent:$Silent
   }
 }
 
@@ -212,12 +214,10 @@ function Remove-AADUser {
     
     [parameter(Mandatory=$false,
     HelpMessage="Suppress console output.")]
-    [switch]
-    $Silent
+    [switch]$Silent
   )
   PROCESS {
-    if($Silent){Remove-AADObject -Type "users" -Id $id -Silent}
-    else{Remove-AADObject -Type "users" -Id $id}
+    Remove-AADObject -Type "users" -Id $id -Silent:$Silent
   }
 }
 
@@ -364,8 +364,7 @@ function Set-AADUser {
     
     [parameter(Mandatory=$false,
     HelpMessage="Suppress console output.")]
-    [switch]
-    $Silent
+    [switch] $Silent
   )
   PROCESS {
     $updatedUser = New-Object System.Object
@@ -387,8 +386,7 @@ function Set-AADUser {
       $updatedUserPasswordProfile.forceChangePasswordNextLogin = $forceChangePasswordNextLogin
       $updatedUser.passwordProfile = $updatedUserPasswordProfile
     }
-    if($Silent){Set-AADObject -Type users -Id $Id -Object $updatedUser -Silent}
-    else{Set-AADObject -Type users -Id $Id -Object $updatedUser}
+    Set-AADObject -Type users -Id $Id -Object $updatedUser -Silent:$Silent
   }
 }
 
@@ -417,14 +415,12 @@ function Set-AADUserThumbnailPhoto {
     
     [parameter(Mandatory=$false,
     HelpMessage="Suppress console output.")]
-    [switch]
-    $Silent  
+    [switch]$Silent  
   )
   PROCESS {
     $value = $null
     if($PSBoundParameters.ContainsKey('ThumbnailPhotoFilePath')){$value = [System.IO.File]::ReadAllBytes($ThumbnailPhotoFilePath)}
     else {$value = $ThumbnailPhotoByteArray}
-    if($Silent){Set-AADObjectProperty -Type "users" -Id $Id -Property "thumbnailPhoto" -Value $value -IsLinked $false -ContentType "image/jpeg" -Silent}
-    else{Set-AADObjectProperty -Type "users" -Id $Id -Property "thumbnailPhoto" -Value $value -IsLinked $false -ContentType "image/jpeg"}
+    Set-AADObjectProperty -Type "users" -Id $Id -Property "thumbnailPhoto" -Value $value -IsLinked $false -ContentType "image/jpeg" -Silent:$Silent
   }
 }

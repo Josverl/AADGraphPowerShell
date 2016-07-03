@@ -3,12 +3,10 @@
   param (
     [parameter(Mandatory=$false,
     HelpMessage="Suppress console output.")]
-    [switch]
-    $Silent
+    [switch]$Silent
   )
   PROCESS {
-    if($Silent){Get-AADObject -Type "tenantDetails" -Silent}
-    else{Get-AADObject -Type "tenantDetails"}
+    Get-AADObject -Type "tenantDetails" -Silent:$Silent
   }
 }
 
@@ -40,7 +38,6 @@ function Set-AADTenantDetail {
         Add-Member -InputObject $updatedTenantDetail -MemberType NoteProperty -Name $key -Value $value
       }
     }
-    if($Silent){Set-AADObject -Type tenantDetails -Object $updatedTenantDetail -Silent}
-    else{Set-AADObject -Type tenantDetails -Object $updatedTenantDetail}
+    Set-AADObject -Type tenantDetails -Object $updatedTenantDetail -Silent:Silent
   }
 }
