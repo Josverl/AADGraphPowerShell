@@ -3,64 +3,71 @@
    Load Adal Libraries 
 .DESCRIPTION
    Load the ADFAL libraries for use with the AAD Graph API.
-   requires that the ADAL libraries are present , and will download the ADAL libvraries using PowershellGet/NUGET if not avaialble
+   requires that the ADAL libraries are present , and will download the ADAL libraries using PowershellGet/NUGET if not avaialble
 .EXAMPLE
    Load-ActiveDirectoryAuthenticationLibrary
 #>
 function Load-ActiveDirectoryAuthenticationLibrary(){ 
-[CmdletBinding()]
-[OutputType([boolean])]
-param ()
+    [CmdletBinding()]
+    [OutputType([boolean])]
+    param ()
+    
+    $moduleDirPath = ($ENV:PSModulePath -split ';' | ?{ $_ -inotlike '*\Users\*'})[0]
+    $modulePath = $moduleDirPath + "\AADGraph"
+    
+    #Store Nuget in a location where we can write to 
+    $NuGetFolder = $env:LOCALAPPDATA + "\Nuget";
+    $NuGetExe = Join-Path $NuGetFolder "nuget.exe";
 
-  $moduleDirPath = ($ENV:PSModulePath -split ';')[0]
-  $modulePath = $moduleDirPath + "\AADGraph"
-  $NuGetDestination = $modulePath + "\Nugets\nuget.exe";
-  #check for nugets folder
-
-    if(-not (Test-Path ($modulePath+"\Nugets"))) {
+    #check for nugets folder
+    if(-not (Test-Path ($NuGetFolder))) {
         Write-Verbose -Message 'NuGet path doesn''t exist. Creating ...';
-        New-Item -Path ($modulePath+"\Nugets") -ItemType "Directory" | out-null
+        New-Item -Path ($NuGetFolder) -ItemType "Directory" | out-null
     }
 
-    $adalPackageDirectories = (Get-ChildItem -Path ($modulePath+"\Nugets") -Filter "Microsoft.IdentityModel.Clients.ActiveDirectory*" -Directory)
+    $adalPackageDirectories = (Get-ChildItem -Path  $NuGetFolder -Filter "Microsoft.IdentityModel.Clients.ActiveDirectory*" -Directory)
     #go get ADAL if its not downloaded yet
     if($adalPackageDirectories.Length -eq 0){
-        If ($Host.Version.Major -ge 5) {
+        Write-Verbose -Message 'ADAL Libraries are not yet installed';
+<#        If ($Host.Version.Major -ge 5) {
             #Make use of Nuget in Powershell 5
             import-Module PackageManagement 
             #UnInstall-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
+            Find-Package -ProviderName NuGet -Name Microsoft.IdentityModel.Clients.ActiveDirectory  
+            -Destination "$modulePath\Nugets"  -Force 
             Install-Package -name Microsoft.IdentityModel.Clients.ActiveDirectory  -Destination "$modulePath\Nugets"  -Force 
         } else { 
-            #Old Style download 
-    Write-Verbose -Message "Active Directory Authentication Library Nuget doesn't exist. Downloading now ...";
-    if(-not(Test-Path $NuGetDestination))
-    {
-      Write-Verbose -Message "nuget.exe not found. Downloading from http://www.nuget.org/nuget.exe ...";
-      $NuGetSource = "http://www.nuget.org/nuget.exe";
-
-      $WebClient = New-Object -TypeName System.Net.WebClient;
-      $WebClient.DownloadFile($NuGetSource, $NuGetDestination);
+#>
+            #Nuget.exe v3 
+            Write-Verbose -Message "Active Directory Authentication Library Nuget doesn't exist. Downloading now ...";
+            if(-not(Test-Path  $NuGetExe))
+            {
+                Write-Verbose -Message "nuget.exe not found. Downloading from http://dist.nuget.org/..."
+                $NuGetSource = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
+                $WebClient = New-Object -TypeName System.Net.WebClient
+                $WebClient.DownloadFile($NuGetSource,  $NuGetExe)
+            }
+            $nugetDownloadExpression = $NuGetExe + " install Microsoft.IdentityModel.Clients.ActiveDirectory -OutputDirectory " + $NuGetFolder 
+            Write-Verbose $nugetDownloadExpression 
+            Invoke-Expression -Command $nugetDownloadExpression;
+#        }
+        #load ADAL libs from downloaded package 
+        $adalPackageDirectories = Get-ChildItem -Path ($modulePath+"\Nugets") -Filter Microsoft.IdentityModel.Clients.ActiveDirectory* -Directory;
+        #Load the libraries from the last downloaded package
+        $ADAL_Assembly = (Get-ChildItem "Microsoft.IdentityModel.Clients.ActiveDirectory.dll" -Path $adalPackageDirectories[$adalPackageDirectories.length-1].FullName -Recurse)
+        $ADAL_WindowsForms_Assembly = (Get-ChildItem "Microsoft.IdentityModel.Clients.ActiveDirectory.WindowsForms.dll" -Path $adalPackageDirectories[$adalPackageDirectories.length-1].FullName -Recurse)
+        if($ADAL_Assembly.Length -gt 0 -and $ADAL_WindowsForms_Assembly.Length -gt 0){
+            Write-Host "Loading ADAL Assemblies ..." -ForegroundColor Green
+            Add-Type -Path $ADAL_Assembly.FullName | Out-Null;
+            Add-Type -Path $ADAL_WindowsForms_Assembly.FullName | Out-Null;
+            return $true
+        } else {
+            Write-Verbose -Message "Fixing Active Directory Authentication Library (ADAL) package directories ...";
+            $adalPackageDirectories | Remove-Item -Recurse -Force | Out-Null;
+            Write-Error "Not able to load ADAL assembly. Delete the Nuget folder : $NuGetFolder" -RecommendedAction 'Restart PowerShell session and try again'
+            return $false;
+        }
     }
-    $nugetDownloadExpression = $modulePath + "\Nugets\nuget.exe install Microsoft.IdentityModel.Clients.ActiveDirectory -OutputDirectory " + $modulePath + "\Nugets | out-null"
-    Invoke-Expression -Command $nugetDownloadExpression;
-  }
-  #load ADAL libs from downloaded package 
-  $adalPackageDirectories = Get-ChildItem -Path ($modulePath+"\Nugets") -Filter Microsoft.IdentityModel.Clients.ActiveDirectory* -Directory;
-  #Load the libraries from the last downloaded package
-  $ADAL_Assembly = (Get-ChildItem "Microsoft.IdentityModel.Clients.ActiveDirectory.dll" -Path $adalPackageDirectories[$adalPackageDirectories.length-1].FullName -Recurse)
-  $ADAL_WindowsForms_Assembly = (Get-ChildItem "Microsoft.IdentityModel.Clients.ActiveDirectory.WindowsForms.dll" -Path $adalPackageDirectories[$adalPackageDirectories.length-1].FullName -Recurse)
-  if($ADAL_Assembly.Length -gt 0 -and $ADAL_WindowsForms_Assembly.Length -gt 0){
-    Write-Host "Loading ADAL Assemblies ..." -ForegroundColor Green
-    Add-Type -Path $ADAL_Assembly.FullName | Out-Null;
-    Add-Type -Path $ADAL_WindowsForms_Assembly.FullName | Out-Null;
-    return $true
-  }
-  else{
-    Write-Verbose -Message "Fixing Active Directory Authentication Library (ADAL) package directories ...";
-    $adalPackageDirectories | Remove-Item -Recurse -Force | Out-Null;
-    Write-Error -Message "Not able to load ADAL assembly. Delete the Nugets folder under $modulePath." -RecommendedAction 'Restart PowerShell session and try again ...';
-    return $false;
-  }
 }
 
 function Get-AuthenticationResult {
@@ -100,7 +107,7 @@ Param(
         $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always)
         
     } else {           
-  <#      
+<#      
         #Assumed Name , required to prompt
         $UserIdentifyer = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier"  -ArgumentList  "josverl2@microsoft.com",  "OptionalDisplayableId"
         $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always, $UserIdentifyer)
