@@ -38,8 +38,8 @@
     # FormatsToProcess = @()
     # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
     NestedModules = @(
-        '\Microsoft.IdentityModel.Clients.ActiveDirectory.2.28.2\lib\net45\Microsoft.IdentityModel.Clients.ActiveDirectory.dll',
-        '\Microsoft.IdentityModel.Clients.ActiveDirectory.2.28.2\lib\net45\Microsoft.IdentityModel.Clients.ActiveDirectory.WindowsForms.dll',
+        '.\Microsoft.IdentityModel.Clients.ActiveDirectory.2.28.2\lib\net45\Microsoft.IdentityModel.Clients.ActiveDirectory.dll',
+        '.\Microsoft.IdentityModel.Clients.ActiveDirectory.2.28.2\lib\net45\Microsoft.IdentityModel.Clients.ActiveDirectory.WindowsForms.dll',
         '.\Cmdlets\AADGraphObject.psm1', 
         '.\Cmdlets\AADGraphUser.psm1',
         '.\Cmdlets\AADGraphGroup.psm1',
