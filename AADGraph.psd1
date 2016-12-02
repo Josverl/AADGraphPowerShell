@@ -7,7 +7,7 @@
     # ID used to uniquely identify this module
     GUID = 'f166fdf6-859a-4649-ab4e-b4e3dc47c39e'
     # Author of this module
-    Author = 'Dushyant Gill'
+    Author = @( 'Dushyant.Gill', 'Jos.Verlinde' )
     # Company or vendor of this module
     CompanyName = 'dushyantgill.com'
     # Copyright statement for this module
@@ -38,12 +38,15 @@
     # FormatsToProcess = @()
     # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
     NestedModules = @(
-        'Cmdlets\AADGraphObject.psm1', 
-        'Cmdlets\AADGraphUser.psm1',
-        'Cmdlets\AADGraphGroup.psm1',
-        'Cmdlets\AADGraphPermission.psm1', 
-        'Cmdlets\AADGraphPolicy.psm1',
-        'Cmdlets\AADGraphTenantDetail.psm1')
+        '\Microsoft.IdentityModel.Clients.ActiveDirectory.2.28.2\lib\net45\Microsoft.IdentityModel.Clients.ActiveDirectory.dll',
+        '\Microsoft.IdentityModel.Clients.ActiveDirectory.2.28.2\lib\net45\Microsoft.IdentityModel.Clients.ActiveDirectory.WindowsForms.dll',
+        '.\Cmdlets\AADGraphObject.psm1', 
+        '.\Cmdlets\AADGraphUser.psm1',
+        '.\Cmdlets\AADGraphGroup.psm1',
+        '.\Cmdlets\AADGraphPermission.psm1', 
+        '.\Cmdlets\AADGraphPolicy.psm1',
+        '.\Cmdlets\AADGraphTenantDetail.psm1'
+    )
     # Functions to export from this module
     FunctionsToExport = @(
         'Connect-AAD', 
