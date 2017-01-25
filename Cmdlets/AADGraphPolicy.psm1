@@ -1,4 +1,4 @@
-﻿function Get-AADGraphPolicy {
+﻿function Get-AADGraphGraphPolicy {
   [CmdletBinding()]
   param (
     [parameter(Mandatory=$false,
@@ -14,12 +14,12 @@
   )
   PROCESS {
     if($ObjectId -ne $null -and $ObjectId -ne "") {
-      if($Silent){Get-AADGraphObjectById -Type "policies" -Id $ObjectId -Silent}
-      else{Get-AADGraphObjectById -Type "policies" -Id $ObjectId}
+      if($Silent){Get-AADGraphGraphObjectById -Type "policies" -Id $ObjectId -Silent}
+      else{Get-AADGraphGraphObjectById -Type "policies" -Id $ObjectId}
     }
     else {
-      if($Silent){Get-AADGraphObject -Type "policies" -Silent}
-      else{Get-AADGraphObject -Type "policies"}
+      if($Silent){Get-AADGraphGraphObject -Type "policies" -Silent}
+      else{Get-AADGraphGraphObject -Type "policies"}
     }
   }
 }
@@ -38,8 +38,8 @@ function Get-TenantDefaultPolicy {
     )
     PROCESS {
         $existingPolicies = New-Object System.Object
-        if($Silent) {$existingPolicies = Get-AADGraphPolicy -Silent}
-        else {$existingPolicies = Get-AADGraphPolicy}
+        if($Silent) {$existingPolicies = Get-AADGraphGraphPolicy -Silent}
+        else {$existingPolicies = Get-AADGraphGraphPolicy}
 
         foreach($policy in $existingPolicies) {
             if($policy.tenantDefaultPolicy -eq '1') {return $policy}
@@ -52,7 +52,7 @@ function Enable-SocialIdp {
     # TODO
 }
 
-function New-AADGraphIdp {
+function New-AADGraphGraphIdp {
   [CmdletBinding()]
   param (
     [parameter(Mandatory=$true,
@@ -130,8 +130,8 @@ function New-AADGraphIdp {
 
     # If PolicyId was specified, get that Policy
     if($PolicyId) {
-        if($Silent) {$existingPolicy = Get-AADGraphPolicy -ObjectId $PolicyId -Silent}
-        else {$existingPolicy = Get-AADGraphPolicy -ObjectId $PolicyId}
+        if($Silent) {$existingPolicy = Get-AADGraphGraphPolicy -ObjectId $PolicyId -Silent}
+        else {$existingPolicy = Get-AADGraphGraphPolicy -ObjectId $PolicyId}
         if ($existingPolicy -eq $null) {
             Write-Host "Could not find Policy with given Object Id." -ForegroundColor Yellow
             return
@@ -227,23 +227,23 @@ function New-AADGraphIdp {
 
     # Create or Update Policy
     if($existingPolicy -and !$AddToNewPolicy) {
-        if($Silent) {Set-AADGraphObject -Type 'policies' -Id $existingPolicy.ObjectId -Object $newPolicy -Silent}
-        else {Set-AADGraphObject -Type 'policies' -Id $existingPolicy.ObjectId -Object $newPolicy}
+        if($Silent) {Set-AADGraphGraphObject -Type 'policies' -Id $existingPolicy.ObjectId -Object $newPolicy -Silent}
+        else {Set-AADGraphGraphObject -Type 'policies' -Id $existingPolicy.ObjectId -Object $newPolicy}
     }
     else {
-        if($Silent) {New-AADGraphObject -Type 'policies' -Object $newPolicy -Silent}
-        else {New-AADGraphObject -Type 'policies' -Object $newPolicy}
+        if($Silent) {New-AADGraphGraphObject -Type 'policies' -Object $newPolicy -Silent}
+        else {New-AADGraphGraphObject -Type 'policies' -Object $newPolicy}
     }
 
     # Create Admin Delegation
     if($ServicePrincipal) {
-        if($Silent) {New-AADGraphAdminPermissionGrantIfNeeded -ServicePrincipalObjectId $ServicePrincipal -Silent}
-        else {New-AADGraphAdminPermissionGrantIfNeeded -ServicePrincipalObjectId $ServicePrincipal}
+        if($Silent) {New-AADGraphGraphAdminPermissionGrantIfNeeded -ServicePrincipalObjectId $ServicePrincipal -Silent}
+        else {New-AADGraphGraphAdminPermissionGrantIfNeeded -ServicePrincipalObjectId $ServicePrincipal}
     }
   }
 }
 
-function Remove-AADGraphIdp {
+function Remove-AADGraphGraphIdp {
     [CmdletBinding()]
   param (
     [parameter(Mandatory=$true,
@@ -279,8 +279,8 @@ function Remove-AADGraphIdp {
             Write-Host "Policy Id must be longer than zero characters." -ForegroundColor Yellow
             return
         }
-        if ($Silent) {$policy = Get-AADGraphPolicy -ObjectId $PolicyId -Silent}
-        else {$policy = Get-AADGraphPolicy -ObjectId $PolicyId}
+        if ($Silent) {$policy = Get-AADGraphGraphPolicy -ObjectId $PolicyId -Silent}
+        else {$policy = Get-AADGraphGraphPolicy -ObjectId $PolicyId}
     }
     else {
         if($Silent) {$policy = Get-TenantDefaultPolicy -Silent}
@@ -336,12 +336,12 @@ function Remove-AADGraphIdp {
 
     # Update the Policy, or Delete if all IDPs are removed
     if($policy.keyCredentials.Length -eq 0) {
-        if($Silent) {Remove-AADGraphObject -Type 'policies' -Id $policy.ObjectId -Silent}
-        else {Remove-AADGraphObject -Type 'policies' -Id $policy.ObjectId}
+        if($Silent) {Remove-AADGraphGraphObject -Type 'policies' -Id $policy.ObjectId -Silent}
+        else {Remove-AADGraphGraphObject -Type 'policies' -Id $policy.ObjectId}
     }
     else {
-        if($Silent) {Set-AADGraphObject -Type 'policies' -Id $policy.ObjectId -Object $policy -Silent}
-        else {Set-AADGraphObject -Type 'policies' -Id $policy.ObjectId -Object $policy}
+        if($Silent) {Set-AADGraphGraphObject -Type 'policies' -Id $policy.ObjectId -Object $policy -Silent}
+        else {Set-AADGraphGraphObject -Type 'policies' -Id $policy.ObjectId -Object $policy}
     }
   }
 }
@@ -369,7 +369,7 @@ function Map-IdpToIdpType([string]$Idp) {
     }
 }
 
-function New-AADGraphAdminPermissionGrantIfNeeded {
+function New-AADGraphGraphAdminPermissionGrantIfNeeded {
     [CmdletBinding()]
     param (   
     [parameter(Mandatory=$false,
@@ -385,8 +385,8 @@ function New-AADGraphAdminPermissionGrantIfNeeded {
     )
     PROCESS {
         $grants = New-Object System.Object
-        if($Silent) {$grants = Get-AADGraphObject -Type 'oauth2PermissionGrants' -Silent}
-        else {$grants = Get-AADGraphObject -Type 'oauth2PermissionGrants'}
+        if($Silent) {$grants = Get-AADGraphGraphObject -Type 'oauth2PermissionGrants' -Silent}
+        else {$grants = Get-AADGraphGraphObject -Type 'oauth2PermissionGrants'}
 
         $graphResourceId = Get-GraphResourceId
 
@@ -395,14 +395,14 @@ function New-AADGraphAdminPermissionGrantIfNeeded {
                 $scope = ''
                 if ($grant.scope) {$scope = $grant.scope}
                 if (!$scope.Contains('user_impersonation')) {$scope += ' user_impersonation'}
-                if(!$Silent) {Set-AADGraphoAuth2PermissionGrant -PermissionGrantObjectId $grant.objectId -Scope $scope -Silent}
-                else {Set-AADGraphoAuth2PermissionGrant -PermissionGrantObjectId $grant.objectId -Scope $scope}
+                if(!$Silent) {Set-AADGraphGraphoAuth2PermissionGrant -PermissionGrantObjectId $grant.objectId -Scope $scope -Silent}
+                else {Set-AADGraphGraphoAuth2PermissionGrant -PermissionGrantObjectId $grant.objectId -Scope $scope}
                 return 
             }
         }
 
-        if ($Silent) {New-AADGraphoAuth2PermissionGrant -ServicePrincipalObjectId $ServicePrincipalObjectId -ResourceObjectId $graphResourceId -Scope 'user_impersonation' -ConsentType 'AllPrincipals' -Silent}
-        else {New-AADGraphoAuth2PermissionGrant -ServicePrincipalObjectId $ServicePrincipalObjectId -ResourceObjectId $graphResourceId -Scope 'user_impersonation' -ConsentType 'AllPrincipals'}
+        if ($Silent) {New-AADGraphGraphoAuth2PermissionGrant -ServicePrincipalObjectId $ServicePrincipalObjectId -ResourceObjectId $graphResourceId -Scope 'user_impersonation' -ConsentType 'AllPrincipals' -Silent}
+        else {New-AADGraphGraphoAuth2PermissionGrant -ServicePrincipalObjectId $ServicePrincipalObjectId -ResourceObjectId $graphResourceId -Scope 'user_impersonation' -ConsentType 'AllPrincipals'}
   }
 }
 

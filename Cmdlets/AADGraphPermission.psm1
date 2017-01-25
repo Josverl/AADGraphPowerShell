@@ -1,4 +1,4 @@
-﻿function Get-AADGraphoAuth2PermissionGrant {
+﻿function Get-AADGraphGraphoAuth2PermissionGrant {
     [CmdletBinding()]
     param (   
     [parameter(Mandatory=$false,
@@ -14,17 +14,17 @@
     )
     PROCESS {
         if($ObjectId -ne $null -and $ObjectId -ne "") {
-        if($Silent){Get-AADGraphObjectById -Type "oauth2PermissionGrants" -Id $ObjectId -Silent}
-        else{Get-AADGraphObjectById -Type "oauth2PermissionGrants" -Id $ObjectId}
+        if($Silent){Get-AADGraphGraphObjectById -Type "oauth2PermissionGrants" -Id $ObjectId -Silent}
+        else{Get-AADGraphGraphObjectById -Type "oauth2PermissionGrants" -Id $ObjectId}
         }
         else {
-            if($Silent){Get-AADGraphObject -Type "oauth2PermissionGrants" -Silent}
-            else{Get-AADGraphObject -Type "oauth2PermissionGrants"}
+            if($Silent){Get-AADGraphGraphObject -Type "oauth2PermissionGrants" -Silent}
+            else{Get-AADGraphGraphObject -Type "oauth2PermissionGrants"}
         }
   }
 }
 
-function Remove-AADGraphoAuth2PermissionGrant {
+function Remove-AADGraphGraphoAuth2PermissionGrant {
     [CmdletBinding()]
     param (
     [parameter(Mandatory=$true,
@@ -39,12 +39,12 @@ function Remove-AADGraphoAuth2PermissionGrant {
     $Silent
   )
   PROCESS {
-    if($Silent){Remove-AADGraphObject -Type "oauth2PermissionGrants" -Id $id -Silent}
-    else{Remove-AADGraphObject -Type "oauth2PermissionGrants" -Id $id}
+    if($Silent){Remove-AADGraphGraphObject -Type "oauth2PermissionGrants" -Id $id -Silent}
+    else{Remove-AADGraphGraphObject -Type "oauth2PermissionGrants" -Id $id}
   }
 }
 
-function New-AADGraphoAuth2PermissionGrant {
+function New-AADGraphGraphoAuth2PermissionGrant {
     [CmdletBinding()]
     param (   
     [parameter(Mandatory=$false,
@@ -92,12 +92,12 @@ function New-AADGraphoAuth2PermissionGrant {
             Add-Member -InputObject $grant -MemberType NoteProperty -Name 'principalId' -Value $PrincipalId
         }
 
-        if ($Silent) {New-AADGraphObject -Type 'oauth2PermissionGrants' -Object $grant -Silent}
-        else {New-AADGraphObject -Type 'oauth2PermissionGrants' -Object $grant}
+        if ($Silent) {New-AADGraphGraphObject -Type 'oauth2PermissionGrants' -Object $grant -Silent}
+        else {New-AADGraphGraphObject -Type 'oauth2PermissionGrants' -Object $grant}
   }
 }
 
-function Set-AADGraphoAuth2PermissionGrant {
+function Set-AADGraphGraphoAuth2PermissionGrant {
     [CmdletBinding()]
     param (   
     [parameter(Mandatory=$false,
@@ -119,7 +119,7 @@ function Set-AADGraphoAuth2PermissionGrant {
         $grant = New-Object System.Object
         Add-Member -InputObject $grant -MemberType NoteProperty -Name 'scope' -Value $Scope
 
-        if ($Silent) {Set-AADGraphObject -Type 'oauth2PermissionGrants' -Id $PermissionGrantObjectId -Object $grant -Silent}
-        else {Set-AADGraphObject -Type 'oauth2PermissionGrants' -Id $PermissionGrantObjectId -Object $grant}
+        if ($Silent) {Set-AADGraphGraphObject -Type 'oauth2PermissionGrants' -Id $PermissionGrantObjectId -Object $grant -Silent}
+        else {Set-AADGraphGraphObject -Type 'oauth2PermissionGrants' -Id $PermissionGrantObjectId -Object $grant}
   }
 }

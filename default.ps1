@@ -125,10 +125,9 @@ Task Copy   -description "Copy items to the release folder" `
         #Robocopy to the rescue 
         &robocopy "$BasePath" "$ReleaseDir" * /XD Release .git .vscode scratch /XF .git* *.tests.ps1 build.ps1 default.ps1 /S /NP /NFL /NDL
 
-
      } else {
         Write-verbose "Copy Script: $BasePath --> $ReleaseDir" -Verbose              
-        MD $ReleaseDir -ErrorAction SilentlyContinue | Out-Null
+        mkdir $ReleaseDir -ErrorAction SilentlyContinue | Out-Null
         Copy-Item -Path (Join-path $BasePath $target.Name ) -Destination $ReleaseDir -Exclude $Exclude 
     }
 

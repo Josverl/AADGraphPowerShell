@@ -49,21 +49,21 @@
     )
     # Functions to export from this module
     FunctionsToExport = @(
-        'Connect-AADGraph', 
-        'Get-AADGraphObject', 
-        'Get-AADGraphObjectById', 
-        'New-AADGraphObject', 
-        'Set-AADGraphObject', 
-        'Remove-AADGraphObject',`
-        'Get-AADGraphLinkedObject', 
-        'Set-AADGraphObjectProperty', 
-        'Get-AADGraphUser', 
-        'New-AADGraphUser', 
-        'Set-AADGraphUser', 
-        'Remove-AADGraphUser', 
-        'Set-AADGraphUserThumbnailPhoto',`
-        'Get-AADGraphTenantDetail',
-        'Set-AADGraphTenantDetail')
+        'Connect-AADGraphGraph', 
+        'Get-AADGraphGraphObject', 
+        'Get-AADGraphGraphObjectById', 
+        'New-AADGraphGraphObject', 
+        'Set-AADGraphGraphObject', 
+        'Remove-AADGraphGraphObject',`
+        'Get-AADGraphGraphLinkedObject', 
+        'Set-AADGraphGraphObjectProperty', 
+        'Get-AADGraphGraphUser', 
+        'New-AADGraphGraphUser', 
+        'Set-AADGraphGraphUser', 
+        'Remove-AADGraphGraphUser', 
+        'Set-AADGraphGraphUserThumbnailPhoto',`
+        'Get-AADGraphGraphTenantDetail',
+        'Set-AADGraphGraphTenantDetail')
     # Cmdlets to export from this module
     CmdletsToExport = '*'
     # Variables to export from this module

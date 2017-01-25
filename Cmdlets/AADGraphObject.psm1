@@ -1,10 +1,10 @@
-﻿#JV - Add Progress indicator 
+#JV - Add Progress indicator 
 #JV - add page size
 #JV - use verbosepreferences 
 
 $Script:SkipToken = "";
 
-function Get-AADGraphObject{
+function Get-AADGraphGraphObject{
 [CmdletBinding()]
 param ([string]$Type, 
     [string]$Query="", 
@@ -25,7 +25,7 @@ param ([string]$Type,
 
     #Check if we are yet authenticated 
     if($global:AuthenticationResult -eq $null){
-        Write-warning "Not connected to an AAD tenant. First run Connect-AADGraph." 
+        Write-warning "Not connected to an AAD tenant. First run Connect-AADGraphGraph." 
         return $null
     }
     #and build the authentication
@@ -95,7 +95,7 @@ param ([string]$Type,
 }
 
 # get a single AAD Object 
-function Get-AADGraphObjectById  {
+function Get-AADGraphGraphObjectById  {
 param([string]$Type, [string]$Id, [switch] $Silent)
 
   $object = $null
@@ -115,13 +115,13 @@ param([string]$Type, [string]$Id, [switch] $Silent)
     }
   }
   else{
-    Write-Host "Not connected to an AAD tenant. First run Connect-AADGraph." -ForegroundColor Yellow
+    Write-Host "Not connected to an AAD tenant. First run Connect-AADGraphGraph." -ForegroundColor Yellow
   }
   return $object
 }
 
 #create a new object in AAD 
-function New-AADGraphObject([string]$Type, [object]$Object, [switch] $Silent) {
+function New-AADGraphGraphObject([string]$Type, [object]$Object, [switch] $Silent) {
   $newObject = $null
   if($global:AuthenticationResult -ne $null) {
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()
@@ -146,13 +146,13 @@ function New-AADGraphObject([string]$Type, [object]$Object, [switch] $Silent) {
     }
   }
   else{
-    Write-Host "Not connected to an AAD tenant. First run Connect-AADGraph."
+    Write-Host "Not connected to an AAD tenant. First run Connect-AADGraphGraph."
   }
   return $newObject
 }
 
 #Update / chnage an existing AAD object
-function Set-AADGraphObject([string]$Type, [string]$Id, [object]$Object, [switch] $Silent) {
+function Set-AADGraphGraphObject([string]$Type, [string]$Id, [object]$Object, [switch] $Silent) {
   if($global:AuthenticationResult -ne $null) {
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()
     $BaseUri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
@@ -175,12 +175,12 @@ function Set-AADGraphObject([string]$Type, [string]$Id, [object]$Object, [switch
     }
   }
   else{
-    Write-Host "Not connected to an AAD tenant. First run Connect-AADGraph." -ForegroundColor Yellow
+    Write-Host "Not connected to an AAD tenant. First run Connect-AADGraphGraph." -ForegroundColor Yellow
   }
 }
 
 #Remove / delete an object from the directory 
-function Remove-AADGraphObject([string]$Type, [string]$Id, [switch] $Silent) {
+function Remove-AADGraphGraphObject([string]$Type, [string]$Id, [switch] $Silent) {
   if($global:AuthenticationResult -ne $null) {
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()
     $BaseUri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
@@ -196,11 +196,11 @@ function Remove-AADGraphObject([string]$Type, [string]$Id, [switch] $Silent) {
     }
   }
   else{
-    Write-Host "Not connected to an AAD tenant. First run Connect-AADGraph." -ForegroundColor Yellow
+    Write-Host "Not connected to an AAD tenant. First run Connect-AADGraphGraph." -ForegroundColor Yellow
   }
 }
 
-function Get-AADGraphLinkedObject([string]$Type, [string] $Id, [string]$Relationship, [switch]$GetLinksOnly, [switch]$Binary, [switch]$All, [switch]$Silent) {
+function Get-AADGraphGraphLinkedObject([string]$Type, [string] $Id, [string]$Relationship, [switch]$GetLinksOnly, [switch]$Binary, [switch]$All, [switch]$Silent) {
   $objects = $null
   if($global:AuthenticationResult -ne $null){
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()
@@ -254,12 +254,12 @@ function Get-AADGraphLinkedObject([string]$Type, [string] $Id, [string]$Relation
     }
   }
   else{
-    Write-Host "Not connected to an AAD tenant. First run Connect-AADGraph." -ForegroundColor Yellow
+    Write-Host "Not connected to an AAD tenant. First run Connect-AADGraphGraph." -ForegroundColor Yellow
   }
   return $objects
 }
 
-function Set-AADGraphObjectProperty([string]$Type, [string] $Id, [string]$Property, [object]$Value, [bool]$IsLinked, [string]$ContentType, [ValidateSet("PUT", "POST", ignorecase=$true)][string]$HTTPMethod = "PUT", [switch] $Silent) {
+function Set-AADGraphGraphObjectProperty([string]$Type, [string] $Id, [string]$Property, [object]$Value, [bool]$IsLinked, [string]$ContentType, [ValidateSet("PUT", "POST", ignorecase=$true)][string]$HTTPMethod = "PUT", [switch] $Silent) {
   if($global:AuthenticationResult -ne $null) {
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()
     $BaseUri = $null
@@ -303,6 +303,6 @@ function Set-AADGraphObjectProperty([string]$Type, [string] $Id, [string]$Proper
     }
   }
   else{
-    Write-Host "Not connected to an AAD tenant. First run Connect-AADGraph." -ForegroundColor Yellow
+    Write-Host "Not connected to an AAD tenant. First run Connect-AADGraphGraph." -ForegroundColor Yellow
   }
 }

@@ -1,5 +1,3 @@
-﻿
-
 function Get-AuthenticationResult {
     [CmdletBinding()]
     #[OutputType([int])]
@@ -162,4 +160,3 @@ function Execute-AADGraphQuery ($Base, $HTTPVerb, $Query, $Data, [switch] $Silen
     }
     return $return
 }
-
