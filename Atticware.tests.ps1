@@ -21,17 +21,7 @@ Describe "AADGraph : tenant test" {
     
 
     it "Connect to tenant $tenant" {
-<<<<<<< HEAD
-        {Connect-AADGraphGraph -tenant $tenant -Credentials $cred  }  | Should not Throw    
-    }
 
-    Context 'Object paging 10' { 
-        it "gets first page of Objects" { {$Script:Users_P1 = Get-AADGraphGraphObject -Type 'users'  -PageSize 10 }| Should not throw
-            $Script:Users_P1.Count | Should be 10
-        }
-
-        it "gets Next page of Objects " { {$Script:Users_P2 = Get-AADGraphGraphObject -Type 'users' -Next -PageSize 10}| Should not throw
-=======
         {Connect-AADGraph -tenant $tenant -Credentials $cred  }  | Should not Throw    
     }
 
@@ -41,7 +31,6 @@ Describe "AADGraph : tenant test" {
         }
 
         it "gets Next page of Objects " { {$Script:Users_P2 = Get-AADGraphObject -Type 'users' -Next -PageSize 10}| Should not throw
->>>>>>> 37c206d3d98850c995a601b37287e479de18b62a
             $Script:Users_P2.Count | Should be 10
         }
 
@@ -56,11 +45,11 @@ Describe "AADGraph : tenant test" {
     Context 'Object paging default' { 
 
 <<<<<<< HEAD
-        it "gets first page of Objects" { {$Script:Users_P1 = Get-AADGraphGraphObject -Type 'users'   }| Should not throw
+        it "gets first page of Objects" { {$Script:Users_P1 = Get-AADGraphObject -Type 'users'   }| Should not throw
             $Script:Users_P1.Count | Should be 100
         }
 
-        it "gets Next page of Objects " { {$Script:Users_P2 = Get-AADGraphGraphObject -Type 'users' -Next }| Should not throw
+        it "gets Next page of Objects " { {$Script:Users_P2 = Get-AADGraphObject -Type 'users' -Next }| Should not throw
 =======
         it "gets first page of Objects" { {$Script:Users_P1 = Get-AADGraphObject -Type 'users'   }| Should not throw
             $Script:Users_P1.Count | Should be 100
@@ -81,11 +70,11 @@ Describe "AADGraph : tenant test" {
     Context 'User paging'  { 
 
 <<<<<<< HEAD
-        it "gets first page of users" { {$Script:Users_P1 = Get-AADGraphGraphUser }| Should not throw
+        it "gets first page of users" { {$Script:Users_P1 = Get-AADGraphUser }| Should not throw
             $Script:Users_P1.Count | Should be 100
         }
 
-        it "gets Next page of users " { {$Script:Users_P2 = Get-AADGraphGraphUser -Next}| Should not throw
+        it "gets Next page of users " { {$Script:Users_P2 = Get-AADGraphUser -Next}| Should not throw
 =======
         it "gets first page of users" { {$Script:Users_P1 = Get-AADGraphUser }| Should not throw
             $Script:Users_P1.Count | Should be 100

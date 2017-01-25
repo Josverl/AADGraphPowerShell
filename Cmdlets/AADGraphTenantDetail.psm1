@@ -1,4 +1,4 @@
-﻿function Get-AADGraphGraphTenantDetail {
+﻿function Get-AADGraphTenantDetail {
   [CmdletBinding()]
   param (
     [parameter(Mandatory=$false,
@@ -6,11 +6,11 @@
     [switch]$Silent
   )
   PROCESS {
-    Get-AADGraphGraphObject -Type "tenantDetails" -Silent:$Silent
+    Get-AADGraphObject -Type "tenantDetails" -Silent:$Silent
   }
 }
 
-function Set-AADGraphGraphTenantDetail {
+function Set-AADGraphTenantDetail {
   [CmdletBinding()]
   param (
     [parameter(Mandatory=$false,
@@ -38,6 +38,6 @@ function Set-AADGraphGraphTenantDetail {
         Add-Member -InputObject $updatedTenantDetail -MemberType NoteProperty -Name $key -Value $value
       }
     }
-    Set-AADGraphGraphObject -Type tenantDetails -Object $updatedTenantDetail -Silent:Silent
+    Set-AADGraphObject -Type tenantDetails -Object $updatedTenantDetail -Silent:Silent
   }
 }
