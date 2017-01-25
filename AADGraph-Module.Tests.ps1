@@ -11,26 +11,23 @@ $VerbosePreference = 0
 Import-Module -FullyQualifiedName "$here\$sut"
 
 Describe "AADGraph-Module" {
+    
+    $Mod = Test-ModuleManifest "$here\$sut" 
 
     it "has a valid Module Manifest" {
-        {$Mod = Test-ModuleManifest "$here\$sut" } | Should Not Throw 
+               
+        $Mod | Should Not be $null
         $mod.Name | Should be "AADGraph"
 
         $mod.ExportedCmdlets.Count | Should be 0
     }
-    it "has Exported Function" {
+    it "has Exported Function" -Pending {
         $mod.ExportedFunctions.Count | Should be 15 
     }
-    it "has nested modules" {
- 
-        $mod.NestedModules.Count  | Should  be 0
+    it "has nested modules"  {
+        #Check if the ADAL Dlls are referenced 
+        $mod.NestedModules.Count  | Should  be 2
     }
-
-    it "Can Load the ADAL Libraries" -Pending {
-    }
-
-
-
 }
 
 

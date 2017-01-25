@@ -4,12 +4,12 @@
    Check if a user is a member of a group
   
 .EXAMPLE
-    $Grp = Get-AADObject -Type "groups" -Query "Generation-y"
-    $result = Test-AADisMemberof -groupId $grp.objectId -memberId $li.objectId
+    $Grp = Get-AADGraphObject -Type "groups" -Query "Generation-y"
+    $result = Test-AADGraphisMemberof -groupId $grp.objectId -memberId $li.objectId
     If ($result.value) { "{0} is a member of {1}" -f $li.displayName , $g2.displayName}
 
 #>
-function Test-AADisMemberOf{
+function Test-AADGraphisMemberOf{
 [CmdletBinding()]
 Param (
     ## Param1 help description    
@@ -49,7 +49,7 @@ Param (
             #will return $null 
         }
     }else{
-        Write-Host "Not connected to an AAD tenant. First run Connect-AAD."
+        Write-Host "Not connected to an AAD tenant. First run Connect-AADGraph."
     }
     return $newObject
 }

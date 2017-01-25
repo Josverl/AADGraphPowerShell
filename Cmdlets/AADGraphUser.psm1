@@ -1,4 +1,4 @@
-﻿function Get-AADUser {
+﻿function Get-AADGraphUser {
   [CmdletBinding()]
   param (
     [parameter( ParameterSetName = 'UserById',
@@ -13,18 +13,19 @@
     [switch]$Silent,
     [parameter(Mandatory=$false,
     HelpMessage="get all objects.")]
-    [switch]$All
+    [switch]$All,
+    [Switch]$Next         #Get the next page 
   )
   PROCESS {
     if ($PSCmdlet.ParameterSetName -eq 'UserById') {
-        Get-AADObjectById -Type "users" -Id $id -Silent:$Silent
+        Get-AADGraphObjectById -Type "users" -Id $id -Silent:$Silent
     } else {
-        Get-AADObject -Type "users" -Silent:$Silent -All:$all 
+        Get-AADGraphObject -Type "users" -Silent:$Silent -All:$all -Next:$next
     }
   }
 }
 
-function New-AADUser {
+function New-AADGraphUser {
   [CmdletBinding()]
   param (
     [parameter(Mandatory=$false, ValueFromPipelineByPropertyName=$true,
@@ -199,11 +200,11 @@ function New-AADUser {
         }
       }
     }
-    New-AADObject -Type users -Object $newUser -Silent:$Silent
+    New-AADGraphObject -Type users -Object $newUser -Silent:$Silent
   }
 }
 
-function Remove-AADUser {
+function Remove-AADGraphUser {
   [CmdletBinding()]
   param (
     [parameter(Mandatory=$true,
@@ -217,11 +218,11 @@ function Remove-AADUser {
     [switch]$Silent
   )
   PROCESS {
-    Remove-AADObject -Type "users" -Id $id -Silent:$Silent
+    Remove-AADGraphObject -Type "users" -Id $id -Silent:$Silent
   }
 }
 
-function Set-AADUser {
+function Set-AADGraphUser {
   [CmdletBinding()]
   param (
     [parameter(Mandatory=$true,
@@ -386,11 +387,11 @@ function Set-AADUser {
       $updatedUserPasswordProfile.forceChangePasswordNextLogin = $forceChangePasswordNextLogin
       $updatedUser.passwordProfile = $updatedUserPasswordProfile
     }
-    Set-AADObject -Type users -Id $Id -Object $updatedUser -Silent:$Silent
+    Set-AADGraphObject -Type users -Id $Id -Object $updatedUser -Silent:$Silent
   }
 }
 
-function Set-AADUserThumbnailPhoto {
+function Set-AADGraphUserThumbnailPhoto {
   [CmdletBinding()]
   param (
     [parameter(Mandatory=$true,
@@ -421,6 +422,6 @@ function Set-AADUserThumbnailPhoto {
     $value = $null
     if($PSBoundParameters.ContainsKey('ThumbnailPhotoFilePath')){$value = [System.IO.File]::ReadAllBytes($ThumbnailPhotoFilePath)}
     else {$value = $ThumbnailPhotoByteArray}
-    Set-AADObjectProperty -Type "users" -Id $Id -Property "thumbnailPhoto" -Value $value -IsLinked $false -ContentType "image/jpeg" -Silent:$Silent
+    Set-AADGraphObjectProperty -Type "users" -Id $Id -Property "thumbnailPhoto" -Value $value -IsLinked $false -ContentType "image/jpeg" -Silent:$Silent
   }
 }
