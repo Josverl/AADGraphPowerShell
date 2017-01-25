@@ -1,66 +1,97 @@
 ﻿#JV - Add Progress indicator 
 #JV - add page size
-# ToDo : use verbosepreferences 
+#JV - use verbosepreferences 
+
+$Script:SkipToken = "";
+
 function Get-AADObject{
 [CmdletBinding()]
-param ([string]$Type, [string]$Query="", [switch] $All, [switch] $Silent, $PageSize = 100  ) 
-  $objects = $null
-  $Page=0 #Page Counter
-  #variable page size between 1 - 999 
-  #Suppress top=100 as that is the default
-  $TopString = if($PageSize -eq 100 -or $PageSize -lt 1 -or $PageSize -ge 999) {""} else {"&$"+"top=$PageSize"}
-
-  $activity = "Get {0}" -f $Type
-  if($global:AuthenticationResult -ne $null){
-    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
+param ([string]$Type, 
+    [string]$Query="", 
+    [switch] $All, 
+    [switch] $Silent, 
+    $PageSize = 100 ,
+    [Switch]$Next      #get the next Page, continue on from the last page(s) read.
     
-    $uri = [string]::Format("{0}{1}/{2}?api-version={3}{4}{5}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(),$global:GraphAPIVersion,$Query,$TopString)
-    if(-not $Silent){
-      Write-Host HTTP GET $uri -ForegroundColor Cyan
+     ) 
+    $objects = $null
+    $Page= 0 #Page Counter
+    #variable page size between 1 - 999 
+    #Suppress top=100 as that is the default
+    $TopString = if($PageSize -eq 100 -or $PageSize -lt 1 -or $PageSize -ge 999) {""} else {"&$"+"top=$PageSize"}
+    
+    #used for progress reporting
+    $activity = "Get {0}" -f $Type
+
+    #Check if we are yet authenticated 
+    if($global:AuthenticationResult -eq $null){
+        Write-warning "Not connected to an AAD tenant. First run Connect-AAD." 
+        return $null
     }
-    $result = Invoke-WebRequest -Method Get -Uri $uri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
+    #and build the authentication
+    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
+
+    #Create the Base URI 
+    $BaseUri = [string]::Format("{0}{1}/{2}?api-version={3}{4}{5}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(),$global:GraphAPIVersion,$Query,$TopString)
+    
+    #Next page is possible , if a prior page had more results  
+    if ($Next -and $Script:SkipToken -eQ $null) {
+        Write-Error '-Next page requested withouth a prior saved skiptoken'
+        Throw 'Paging error' 
+    } 
+    if ($Next -and $Script:SkipToken -ne $null) {
+        Write-Verbose 'Starting using remembered skiptoken'
+        $PageUri = $BaseUri + "&" + $Script:SkipToken.Split('?')[1] 
+    } else {
+        #the default ; start at the beginning
+        $PageUri = $BaseUri
+    }
+    Write-Verbose "FIRST HTTP GET $PageUri" 
+    $result = Invoke-WebRequest -Method Get -Uri $PageUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
     if($result.StatusCode -eq 200){
-      $page++;
-      if(-not $Silent){
-        Write-Verbose  "Get succeeded."
-      }
-      $json = (ConvertFrom-Json $result.Content)
-      if($json -ne $null){
-        $objects = $json.value
-        $nextLink = $json."odata.nextLink"
-        if($nextLink -ne $null){
-          if($all){
-            $getNextPage = $true
-            do{
-              $page++
-              Write-Progress -Activity $activity -Status "Getting page : $Page" 
-              if(-not $Silent){
-                Write-Verbose "Getting the next page of results." 
-                Write-Verbose "HTTP GET $($uri + "&" + $nextLink.Split('?')[1])"
-              }
-              # subsequent pages are the same size as the first one
-              $result = Invoke-WebRequest -Method Get -Uri ($uri + "&" + $nextLink.Split('?')[1] ) -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
-              if($result.StatusCode -eq 200){
-                $json = (ConvertFrom-Json $result.Content)
-                if($json -ne $null){
-                  $objects += $json.value
-                  $nextLink = $json."odata.nextLink"
-                  if($nextLink -ne $null){$getNextPage = $true}
-                  else{$getNextPage = $false}
+        $page++;
+        $oDataSet= (ConvertFrom-Json $result.Content)
+        if($oDataSet-ne $null){
+            #objects were retrieved , so deserialze them from json 
+            $objects = $oDataSet.value
+            #Save the odata skiptoken for the next page if there is one 
+            $Script:SkipToken = $oDataSet."odata.nextLink"
+            if($Script:SkipToken -ne $null){
+                Write-Verbose "More data..."
+                $MoreData = $true
+                if($all ){
+                    #There is more data , and we need to get all data, so also get the next page 
+                    do{
+                        $page++
+                        Write-Progress -Activity $activity -Status "Getting page : $Page" 
+                        Write-Verbose "Getting the next page of results." 
+                        $PageUri = $BaseUri + "&" + $Script:SkipToken.Split('?')[1] 
+
+                        Write-Verbose "HTTP GET $PageUri"
+                        # subsequent pages are the same size as the first one
+                        $result = Invoke-WebRequest -Method Get -Uri $PageUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"} 
+                        if($result.StatusCode -eq 200){
+                            $oDataSet= (ConvertFrom-Json $result.Content)
+                            if($oDataSet-ne $null){
+                                $objects += $oDataSet.value
+                                $Script:SkipToken = $oDataSet."odata.nextLink"
+                    
+                                if($Script:SkipToken -ne $null){
+                                    Write-Verbose "More data..."
+                                    $MoreData = $true}
+                                else{
+                                    $MoreData = $false
+                                }
+                            }
+                        }
+                    } until(-not $MoreData)
+
+                    Write-Progress -Activity $activity -Completed
                 }
-              }
             }
-            until(-not $getNextPage)
-            Write-Progress -Activity $activity -Completed
-          }
         }
-      }
     }
-  }
-  else{
-    Write-Host "Not connected to an AAD tenant. First run Connect-AAD." -ForegroundColor Yellow
-  }
-  return $objects
+    return $objects
 }
 
 # get a single AAD Object 
@@ -70,11 +101,11 @@ param([string]$Type, [string]$Id, [switch] $Silent)
   $object = $null
   if($global:AuthenticationResult -ne $null){
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()
-    $uri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
+    $BaseUri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
     if(-not $Silent){
-      Write-Host HTTP GET $uri -ForegroundColor Cyan
+      Write-Host HTTP GET $BaseUri -ForegroundColor Cyan
     }
-    $result = Invoke-WebRequest -Method Get -Uri $uri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
+    $result = Invoke-WebRequest -Method Get -Uri $BaseUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
     if($result.StatusCode -eq 200)
     {
       if(-not $Silent){
@@ -94,9 +125,9 @@ function New-AADObject([string]$Type, [object]$Object, [switch] $Silent) {
   $newObject = $null
   if($global:AuthenticationResult -ne $null) {
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()
-    $uri = [string]::Format("{0}{1}/{2}?api-version={3}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(),$global:GraphAPIVersion)
+    $BaseUri = [string]::Format("{0}{1}/{2}?api-version={3}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(),$global:GraphAPIVersion)
     if(-not $Silent){
-      Write-Host HTTP POST $uri -ForegroundColor Cyan
+      Write-Host HTTP POST $BaseUri -ForegroundColor Cyan
     }
     $enc = New-Object "System.Text.ASCIIEncoding"
     $body = ConvertTo-Json -InputObject $Object -Depth 10
@@ -106,7 +137,7 @@ function New-AADObject([string]$Type, [object]$Object, [switch] $Silent) {
     $byteArray = $enc.GetBytes($body)
     $contentLength = $byteArray.Length
     $headers = @{"Authorization"=$header;"Content-Type"="application/json";"Content-Length"=$contentLength}
-    $result = Invoke-WebRequest -Method Post -Uri $uri -Headers $headers -Body $body
+    $result = Invoke-WebRequest -Method Post -Uri $BaseUri -Headers $headers -Body $body
     if($result.StatusCode -eq 201){
       if(-not $Silent){
         Write-Host "Create succeeded." -ForegroundColor Cyan
@@ -124,9 +155,9 @@ function New-AADObject([string]$Type, [object]$Object, [switch] $Silent) {
 function Set-AADObject([string]$Type, [string]$Id, [object]$Object, [switch] $Silent) {
   if($global:AuthenticationResult -ne $null) {
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()
-    $uri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
+    $BaseUri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
     if(-not $Silent){
-      Write-Host HTTP PATCH $uri -ForegroundColor Cyan
+      Write-Host HTTP PATCH $BaseUri -ForegroundColor Cyan
     }
     $enc = New-Object "System.Text.ASCIIEncoding"
     $body = ConvertTo-Json -InputObject $Object -Depth 10
@@ -136,7 +167,7 @@ function Set-AADObject([string]$Type, [string]$Id, [object]$Object, [switch] $Si
     $byteArray = $enc.GetBytes($body)
     $contentLength = $byteArray.Length
     $headers = @{"Authorization"=$header;"Content-Type"="application/json";"Content-Length"=$contentLength}
-    $result = Invoke-WebRequest -Method Patch -Uri $uri -Headers $headers -Body $body
+    $result = Invoke-WebRequest -Method Patch -Uri $BaseUri -Headers $headers -Body $body
     if($result.StatusCode -eq 204){
       if(-not $Silent){
         Write-Host "Update succeeded." -ForegroundColor Cyan
@@ -152,12 +183,12 @@ function Set-AADObject([string]$Type, [string]$Id, [object]$Object, [switch] $Si
 function Remove-AADObject([string]$Type, [string]$Id, [switch] $Silent) {
   if($global:AuthenticationResult -ne $null) {
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()
-    $uri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
+    $BaseUri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
     if(-not $Silent){
-      Write-Host HTTP DELETE $uri -ForegroundColor Cyan
+      Write-Host HTTP DELETE $BaseUri -ForegroundColor Cyan
     }
     $headers = @{"Authorization"=$header;"Content-Type"="application/json"}
-    $result = Invoke-WebRequest -Method Delete -Uri $uri -Headers $headers
+    $result = Invoke-WebRequest -Method Delete -Uri $BaseUri -Headers $headers
     if($result.StatusCode -eq 204){
       if(-not $Silent){
         Write-Host "Delete succeeded." -ForegroundColor Cyan
@@ -173,46 +204,46 @@ function Get-AADLinkedObject([string]$Type, [string] $Id, [string]$Relationship,
   $objects = $null
   if($global:AuthenticationResult -ne $null){
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()
-    $uri = $null
+    $BaseUri = $null
     if($GetLinksOnly) {
-      $uri = [string]::Format("{0}{1}/{2}/{3}/`$links/{4}?api-version={5}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId, $Type, $Id, $Relationship,$global:GraphAPIVersion)
+      $BaseUri = [string]::Format("{0}{1}/{2}/{3}/`$links/{4}?api-version={5}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId, $Type, $Id, $Relationship,$global:GraphAPIVersion)
     }
     else {
-      $uri = [string]::Format("{0}{1}/{2}/{3}/{4}?api-version={5}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId, $Type, $Id, $Relationship,$global:GraphAPIVersion)
+      $BaseUri = [string]::Format("{0}{1}/{2}/{3}/{4}?api-version={5}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId, $Type, $Id, $Relationship,$global:GraphAPIVersion)
     }
     if(-not $Silent) {
-      Write-Host HTTP GET $uri -ForegroundColor Cyan
+      Write-Host HTTP GET $BaseUri -ForegroundColor Cyan
     }
-    $result = Invoke-WebRequest -Method Get -Uri $uri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
+    $result = Invoke-WebRequest -Method Get -Uri $BaseUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
     if($result.StatusCode -eq 200){
       if(-not $Silent) {
         Write-Host "Get succeeded." -ForegroundColor Cyan
       }
       if(-not $Binary) {
-        $json = (ConvertFrom-Json $result.Content)
-        if($json -ne $null){
-          $objects = $json.value
-          $nextLink = $json."odata.nextLink"
-          if($nextLink -ne $null){
+        $oDataSet= (ConvertFrom-Json $result.Content)
+        if($oDataSet-ne $null){
+          $objects = $oDataSet.value
+          $Script:SkipToken = $oDataSet."odata.nextLink"
+          if($Script:SkipToken -ne $null){
             if($all){
-              $getNextPage = $true
+              $MoreData = $true
               do{
                 if(-not $Silent){
                   Write-Host "Getting the next page of results." -ForegroundColor Cyan
-                  Write-Host HTTP GET ($uri + "&" + $nextLink.Split('?')[1]) -ForegroundColor Cyan
+                  Write-Host HTTP GET ($BaseUri + "&" + $Script:SkipToken.Split('?')[1]) -ForegroundColor Cyan
                 }
-                $result = Invoke-WebRequest -Method Get -Uri ($uri + "&" + $nextLink.Split('?')[1]) -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
+                $result = Invoke-WebRequest -Method Get -Uri ($BaseUri + "&" + $Script:SkipToken.Split('?')[1]) -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
                 if($result.StatusCode -eq 200){
-                  $json = (ConvertFrom-Json $result.Content)
-                  if($json -ne $null){
-                    $objects += $json.value
-                    $nextLink = $json."odata.nextLink"
-                    if($nextLink -ne $null){$getNextPage = $true}
-                    else{$getNextPage = $false}
+                  $oDataSet= (ConvertFrom-Json $result.Content)
+                  if($oDataSet-ne $null){
+                    $objects += $oDataSet.value
+                    $Script:SkipToken = $oDataSet."odata.nextLink"
+                    if($Script:SkipToken -ne $null){$MoreData = $true}
+                    else{$MoreData = $false}
                   }
                 }
               }
-              until(-not $getNextPage)
+              until(-not $MoreData)
             }
           }
         }
@@ -231,16 +262,16 @@ function Get-AADLinkedObject([string]$Type, [string] $Id, [string]$Relationship,
 function Set-AADObjectProperty([string]$Type, [string] $Id, [string]$Property, [object]$Value, [bool]$IsLinked, [string]$ContentType, [ValidateSet("PUT", "POST", ignorecase=$true)][string]$HTTPMethod = "PUT", [switch] $Silent) {
   if($global:AuthenticationResult -ne $null) {
     $header = $global:AuthenticationResult.CreateAuthorizationHeader()
-    $uri = $null
+    $BaseUri = $null
     if($IsLinked) {
-      $uri = [string]::Format('{0}{1}/{2}/{3}/$links/{4}?api-version={5}',$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type, $Id, $Property,$global:GraphAPIVersion)
+      $BaseUri = [string]::Format('{0}{1}/{2}/{3}/$links/{4}?api-version={5}',$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type, $Id, $Property,$global:GraphAPIVersion)
     }
     else {
-      $uri = [string]::Format('{0}{1}/{2}/{3}/{4}?api-version={5}',$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type, $Id, $Property,$global:GraphAPIVersion)
+      $BaseUri = [string]::Format('{0}{1}/{2}/{3}/{4}?api-version={5}',$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type, $Id, $Property,$global:GraphAPIVersion)
     }
     
     if(-not $Silent){
-      Write-Host HTTP $HTTPMethod.ToUpper() $uri -ForegroundColor Cyan
+      Write-Host HTTP $HTTPMethod.ToUpper() $BaseUri -ForegroundColor Cyan
     }
     $body = $null
     $byteArray = $null
@@ -264,7 +295,7 @@ function Set-AADObjectProperty([string]$Type, [string] $Id, [string]$Property, [
     }
     $contentLength = $byteArray.Length
     $headers = @{"Authorization"=$header;"Content-Type"=$contentType;"Content-Length"=$contentLength}
-    $result = Invoke-WebRequest -Method $HTTPMethod -Uri $uri -Headers $headers -Body $body
+    $result = Invoke-WebRequest -Method $HTTPMethod -Uri $BaseUri -Headers $headers -Body $body
     if($result.StatusCode -eq 204){
       if(-not $Silent){
         Write-Host "Update succeeded." -ForegroundColor Cyan

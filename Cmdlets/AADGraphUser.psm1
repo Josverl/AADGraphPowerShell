@@ -13,13 +13,14 @@
     [switch]$Silent,
     [parameter(Mandatory=$false,
     HelpMessage="get all objects.")]
-    [switch]$All
+    [switch]$All,
+    [Switch]$Next         #Get the next page 
   )
   PROCESS {
     if ($PSCmdlet.ParameterSetName -eq 'UserById') {
         Get-AADObjectById -Type "users" -Id $id -Silent:$Silent
     } else {
-        Get-AADObject -Type "users" -Silent:$Silent -All:$all 
+        Get-AADObject -Type "users" -Silent:$Silent -All:$all -Next:$next
     }
   }
 }
