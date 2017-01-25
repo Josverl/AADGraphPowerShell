@@ -1,8 +1,14 @@
 ﻿<#
  #  use Invoke-Psake to start the build
  - Support Module
+    #v0.8 - correceld path bug that caused issues with publishing a module
  - Script
-    Test 
+ #  v0.7 Test script Install -Scope CurrentUser
+            + Change taskname to Publish ( dit moet toch al gedaan zijn??) 
+            + Add Git Tag + published version after publishing
+ #  v0.6 improve logic for Signing
+ #  v0.5 Add logic to use current folder if nothing else specified
+ #  v0.4 Add logic to deal with Scripts and Modules
 #>
 
 
@@ -13,10 +19,15 @@ Properties {
     if ($PSScriptRoot ) { 
         $BasePath = $PSScriptRoot 
     } else {
-        #Handle run in ISE 
+        #Handle run in ISE with open file
         $BasePath = split-path -parent $psISE.CurrentFile.Fullpath
     }
+    if ([string]::IsNullOrEmpty($BasePath)) {
+        Write-Verbose "Using the Working Directory as Base" -Verbose
+        $BasePath =$pwd
+    }
     $Modules = @(Get-Item $BasePath\*.psd1 | Foreach-Object {$null = Test-ModuleManifest -Path $_ -ErrorAction SilentlyContinue; if ($?) {$_}})
+
     $Target=@{Type = "";Name ="" }
 
     if ($Modules.Count -gt 0) {
@@ -24,7 +35,7 @@ Properties {
         $Target.Name = $Modules[0].BaseName
         $Target.BaseName = $Modules[0].BaseName
     } else {
-        #No modules found , lets look for a script
+        Write-verbose "No modules found, looking for a script"
         #work around strange behaviour test-scriptFileInfo
 
         $scripts = @(Get-Item $BasePath\*.ps1|Foreach {
@@ -48,19 +59,19 @@ Properties {
     # The directory used to publish the module from.  If you are using Git, the
     # $PublishRootDir should be ignored if it is under the workspace directory.
     $PublishRootDir = join-path $BasePath 'Release'
-    $ReleaseDir     =  join-path $PublishRootDir $Null
+    $ReleaseDir     =  join-path $PublishRootDir  $ModuleName
 
     # The following items will not be copied to the $ReleaseDir.
     # Add items that should not be published with the module.
     $Exclude = @(
-        'Release','Tests','*.git','*.git*','.git','.vscode','launch.json','*.tests.ps1',
-        #do not copy nuget ballast
-        'net40','tools','*.nupkg',
+        'Release','Tests','.git*','.vscode','launch.json','*.tests.ps1',
+        #donot copy nuget ballast
+        'net40','tools','*.nupkg','Microsoft.ApplicationInsights.xml',
         #donot copy dev and build artefacts
         'scratch','build.ps1','default.ps1'
     )
 
-    $TestRepository = "DevRepo" #$null
+    $TestRepository = "Dev" #$null
     # Name of the repository you wish to publish to. Default repo is the PSGallery.
     $PublishRepository = "PSGallery" #$null
 
@@ -103,18 +114,17 @@ Task Copy   -description "Copy items to the release folder" `
             -Depends Clean `
             -requiredVariables BasePath, ReleaseDir, Exclude, Target {
     if ($target.Type -ieq "Module" ){
-        $ModuleName = $target['Name']
-        Write-verbose "Copy Module: $BasePath --> $ReleaseDir\$ModuleName " -Verbose              
-        MD $ReleaseDir -ErrorAction SilentlyContinue | Out-Null
-        MD "$PublishDir\$ModuleName" -ErrorAction SilentlyContinue | Out-Null
+        $ReleaseDir 
+        
+        Write-verbose "Copy Module: $BasePath --> $ReleaseDir" -Verbose              
+        mkdir $ReleaseDir -ErrorAction SilentlyContinue | Out-Null
+        
+        #Copy-Item -Path $BasePath\*.* -Destination $ReleaseDir -Recurse -Exclude $Exclude 
+        #Note the subfolders are not copied :-( 
+        
+        #Robocopy to the rescue 
+        &robocopy "$BasePath" "$ReleaseDir" * /XD Release .git .vscode scratch /XF .git* *.tests.ps1 build.ps1 default.ps1 /S /NP /NFL /NDL
 
-        Copy-Item -Path "$BasePath\" -Destination $ReleaseDir -Recurse -Exclude $Exclude -Include @('*.*','*.') 
-
-#        &robocopy $BasePath $PublishDir\$ModuleName /s /xf $($Exclude -join ' ') /xd .git Release Scratch
-
-
-
-        #Copy-Item -Path "$BasePath\" -Destination $ReleaseDir -Recurse -Exclude $Exclude -Include @('*.*','*.') 
 
      } else {
         Write-verbose "Copy Script: $BasePath --> $ReleaseDir" -Verbose              
@@ -129,9 +139,11 @@ Task Sign   -Depends Copy `
    "Sign"
     
     #Just get the first codesigning cert 
-    $SigningCert = @(gci cert:\currentuser\my -codesigning)[0] 
-    if ($SigningCert) {
+    $CodeSigningCerts = @(gci cert:\currentuser\my -codesigning)
 
+     
+    if ($CodeSigningCerts.Count -ge 1)  {
+        $SigningCert = $CodeSigningCerts[0]
         if ($target.Type -ieq "Module" ){
             #ToDo SIgn Module
 
@@ -154,8 +166,10 @@ Task TestPublish -Depends Sign `
 
     $publishParams = @{} 
     $publishParams['Repository'] = $TestRepository
+    
 
     if ($target.Type -ieq "Module" ){
+        
         #remove the same version form the test repo, if it already exists
         $MFT = Test-ModuleManifest -Path (Join-Path $ReleaseDir -ChildPath "$moduleName.psd1") 
         $filter = "{0}.{1}.nupkg" -f $target.Name , $MFT.Version.ToString()
@@ -190,22 +204,23 @@ Task TestInstall -Depends TestPublish{
 
         $MFT = Test-ModuleManifest -Path (Join-Path $ReleaseDir -ChildPath "$moduleName.psd1") 
         find-Module -Name $mft.Name -RequiredVersion $mft.version -Repository $TestRepository
-        install-Module -Name $mft.Name -RequiredVersion $mft.version -Repository $TestRepository -Force 
+        install-Module -Name $mft.Name -RequiredVersion $mft.version -Repository $TestRepository -Force -Scope CurrentUser
         Get-InstalledModule -Name $mft.Name
 
     } else {
         $MFT = Test-ScriptFileInfo -Path (Join-Path $ReleaseDir -ChildPath $target.Name ) 
 
         find-script -Name $mft.Name -RequiredVersion $mft.version -Repository $TestRepository
-        install-script -Name $mft.Name -RequiredVersion $mft.version -Repository $TestRepository -Force 
-        Get-InstalledScript -Name $mft.Name 
+        install-script -Name $mft.Name -RequiredVersion $mft.version -Repository $TestRepository -Force -Scope CurrentUser
+        Get-InstalledScript -Name $mft.Name -RequiredVersion $mft.version | FT Name, Version, Repo*, InstalledLocation
+
+        uninstall-script -Name $mft.Name -RequiredVersion $mft.version -Force 
 
     }
 
 }
 
-Task ModulePublish -Depends TestModuleInstall {
-
+Task Publish -Depends TestInstall {
 
     $publishParams = @{} 
 
@@ -225,6 +240,11 @@ Task ModulePublish -Depends TestModuleInstall {
         $publishParams['Path']= $ReleaseDir
         "Calling Publish-Module..."
         Publish-Module @publishParams 
+
+        #Add a tag
+        $tag = "{0}_{1}" -f $target.BaseName,$MFT.Version.ToString()
+        Write-Verbose "Git Tag $tag" -Verbose
+        Git tag $tag
     } else{
         #remove the same version form the test repo, if it already exists
         $MFT = Test-ScriptFileInfo -Path (Join-Path $ReleaseDir -ChildPath $target.Name ) 
@@ -234,6 +254,11 @@ Task ModulePublish -Depends TestModuleInstall {
         "Calling Publish-Script..."
         $publishParams['Path']= Join-Path $ReleaseDir $target.Name
 
-        Publish-Script @publishParams    
+        Publish-Script @publishParams
+        
+        #Add a tag
+        $tag = "{0}_{1}" -f $target.BaseName,$MFT.Version.ToString()
+        Write-Verbose "Git Tag $tag" -Verbose
+        Git tag $tag
     }
 }
