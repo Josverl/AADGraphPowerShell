@@ -91,11 +91,11 @@ FormatTaskName "|>-------- {0} --------<|"
 Task Test  {
  
     Import-Module Pester
- #   $Results = Invoke-Pester -PassThru
+    $Results = Invoke-Pester -PassThru
 
- #   if  ($Results.FailedCount -gt 0) {
- #       Throw "Testing Failed"
- #   }
+    if  ($Results.FailedCount -gt 0) {
+        Throw "Testing Failed"
+   }
 }
 
 Task Clean  -requiredVariables PublishRootDir `

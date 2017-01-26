@@ -5,22 +5,25 @@ $sut = (Split-Path -Leaf $MyInvocation.MyCommand.Path) -replace '\.Tests\.', '.'
 $sut = $sut -replace '-Module', ''
 $sut = $sut -replace '.ps1', '.psd1'
 
-Write-Host "Test Module : $here\$sut" 
-$VerbosePreference = 0
+$ModuleUnderTest = Join-path $here $sut
+Write-Verbose "Test Module : $ModuleUnderTest " -Verbose
+#$VerbosePreference = 'Stop'
 
-Import-Module -FullyQualifiedName "$here\$sut"
+Import-Module -FullyQualifiedName $ModuleUnderTest 
 
 Describe "AADGraph-Module" {
     
-    $Mod = Test-ModuleManifest "$here\$sut" 
+    $Mod = Test-ModuleManifest $ModuleUnderTest  -ErrorAction SilentlyContinue
 
     it "has a valid Module Manifest" {
                
         $Mod | Should Not be $null
-        $mod.Name | Should be "AADGraph"
-
-        $mod.ExportedCmdlets.Count | Should be 0
+        If ($mod) { 
+            $mod.Name | Should be "AADGraph"
+            $mod.ExportedCmdlets.Count | Should be 0
+        }
     }
+
     it "has Exported Function" -Pending {
         $mod.ExportedFunctions.Count | Should be 15 
     }
