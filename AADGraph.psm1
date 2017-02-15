@@ -138,7 +138,7 @@ function Execute-AADGraphQuery ($Base, $HTTPVerb, $Query, $Data, [switch] $Silen
                 Write-Host $body -ForegroundColor Cyan
             }
         }
-        $result = Invoke-WebRequest -Method $HTTPVerb -Uri $uri -Headers $headers -Body $body
+        $result = Invoke-Webrequest -UseBasicParsing -Method $HTTPVerb -Uri $uri -Headers $headers -Body $body
         if($result.StatusCode -ge 200 -and $result.StatusCode -le 399){
             if(-not $Silent){
                 Write-Host

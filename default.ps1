@@ -1,6 +1,10 @@
 ﻿<#
  #  use Invoke-Psake to start the build
  - Support Module
+    #v0.9 - clean up release copy by removing unneeded files from NUGET retrieved dependencies
+          - add 2nd test run after intial test install 
+       
+
     #v0.8 - correceld path bug that caused issues with publishing a module
  - Script
  #  v0.7 Test script Install -Scope CurrentUser
@@ -10,7 +14,6 @@
  #  v0.5 Add logic to use current folder if nothing else specified
  #  v0.4 Add logic to deal with Scripts and Modules
 #>
-
 
 Task default -Depends TestInstall
 
@@ -26,7 +29,9 @@ Properties {
         Write-Verbose "Using the Working Directory as Base" -Verbose
         $BasePath =$pwd
     }
-    $Modules = @(Get-Item $BasePath\*.psd1 | Foreach-Object {$null = Test-ModuleManifest -Path $_ -ErrorAction SilentlyContinue; if ($?) {$_}})
+    $Modules = @(Get-Item $BasePath\*.psd1 | Foreach-Object {$null = Test-ModuleManifest -Path $_ -ErrorAction SilentlyContinue; if ($?) {
+                $_
+            }})
 
     $Target=@{Type = "";Name ="" }
 
@@ -38,11 +43,14 @@ Properties {
         Write-verbose "No modules found, looking for a script"
         #work around strange behaviour test-scriptFileInfo
 
-        $scripts = @(Get-Item $BasePath\*.ps1|Foreach {
-            Try { 
-                $null =Test-ScriptFileInfo -Path $_ -ErrorAction SilentlyContinue; 
-            } catch {}
-            if ($?) {$_}})
+        $scripts = @(Get-Item $BasePath\*.ps1|ForEach-Object {
+                Try { 
+                    $null =Test-ScriptFileInfo -Path $_ -ErrorAction SilentlyContinue; 
+                } catch {
+                }
+                if ($?) {
+                    $_
+                }})
 
 
         $Target.Type = "Script"
@@ -64,7 +72,7 @@ Properties {
     # The following items will not be copied to the $ReleaseDir.
     # Add items that should not be published with the module.
     $Exclude = @(
-        'Release','Tests','.git*','.vscode','launch.json','*.tests.ps1',
+        'Release','Released','Tests','.git*','.vscode','launch.json','*.tests.ps1',
         #donot copy nuget ballast
         'net40','tools','*.nupkg','Microsoft.ApplicationInsights.xml',
         #donot copy dev and build artefacts
@@ -90,12 +98,10 @@ FormatTaskName "|>-------- {0} --------<|"
 
 Task Test  {
  
-    Import-Module Pester
     $Results = Invoke-Pester -PassThru
-
     if  ($Results.FailedCount -gt 0) {
-        Throw "Testing Failed"
-   }
+          Throw "Testing Failed"
+    }
 }
 
 Task Clean  -requiredVariables PublishRootDir `
@@ -125,7 +131,29 @@ Task Copy   -description "Copy items to the release folder" `
         #Robocopy to the rescue 
         &robocopy "$BasePath" "$ReleaseDir" * /XD Release .git .vscode scratch /XF .git* *.tests.ps1 build.ps1 default.ps1 /S /NP /NFL /NDL
 
-     } else {
+        #Clean up the unneeded folders and stuff underneath the Microsoft.IdentityModel module folders 
+        $Modulefolders = Get-ChildItem -Path $ReleaseDir -Directory -Filter "Microsoft.*"
+
+        Foreach ($mod in $Modulefolders) {
+            #Now look for the folders in the folder 
+            $SubFolders = Get-ChildItem -Path $Mod.FullName -Directory -Recurse
+            #back to front to allow recursive de
+            [Array]::Reverse($SubFolders)
+
+            foreach ($folder in $SubFolders) {
+                switch ($Folder.Name) { 
+                    {$_ -in 'lib','net45'} {
+                        Write-Verbose "Keep folder $($Folder.Fullname)" 
+                        #Write-Host -ForegroundColor Green "Keep folder $($Folder.Fullname)"
+                    }
+                    Default {
+                        #Write-Verbose "DELETE folder [$($Folder.name)] $($Folder.Fullname)" -Verbose
+                        Remove-Item -Path $folder.FullName -Force -Recurse
+                    }
+                }
+            }
+        }
+    } else {
         Write-verbose "Copy Script: $BasePath --> $ReleaseDir" -Verbose              
         mkdir $ReleaseDir -ErrorAction SilentlyContinue | Out-Null
         Copy-Item -Path (Join-path $BasePath $target.Name ) -Destination $ReleaseDir -Exclude $Exclude 
@@ -135,7 +163,7 @@ Task Copy   -description "Copy items to the release folder" `
 
 Task Sign   -Depends Copy `
             -RequiredVariables ReleaseDir, Target {
-   "Sign"
+    "Sign"
     
     #Just get the first codesigning cert 
     $CodeSigningCerts = @(gci cert:\currentuser\my -codesigning)
@@ -198,13 +226,19 @@ Task TestPublish -Depends Sign `
 
 
 Task TestInstall -Depends TestPublish{
-   "Test Install"
+    "Test Install"
     if ($target.Type -ieq "Module" ){
 
         $MFT = Test-ModuleManifest -Path (Join-Path $ReleaseDir -ChildPath "$moduleName.psd1") 
         find-Module -Name $mft.Name -RequiredVersion $mft.version -Repository $TestRepository
         install-Module -Name $mft.Name -RequiredVersion $mft.version -Repository $TestRepository -Force -Scope CurrentUser
         Get-InstalledModule -Name $mft.Name
+
+        #now run a 2nd testrun 
+        $Results = Invoke-Pester -PassThru
+        if  ($Results.FailedCount -gt 0) {
+              Throw "Testing Installed Module Failed"
+        }
 
     } else {
         $MFT = Test-ScriptFileInfo -Path (Join-Path $ReleaseDir -ChildPath $target.Name ) 
@@ -214,9 +248,7 @@ Task TestInstall -Depends TestPublish{
         Get-InstalledScript -Name $mft.Name -RequiredVersion $mft.version | FT Name, Version, Repo*, InstalledLocation
 
         uninstall-script -Name $mft.Name -RequiredVersion $mft.version -Force 
-
     }
-
 }
 
 Task Publish -Depends TestInstall {

@@ -39,7 +39,7 @@ Param (
         $contentLength = $byteArray.Length
         $headers = @{"Authorization"=$header;"Content-Type"="application/json";"Content-Length"=$contentLength}
         #post the request 
-        $result = Invoke-WebRequest -Method Post -Uri $uri -Headers $headers -Body $body
+        $result = Invoke-Webrequest -UseBasicParsing -Method Post -Uri $uri -Headers $headers -Body $body
         #return 200 = OK 
         if($result.StatusCode -eq 200){
             Write-verbose "IsMemberof query succeeded."

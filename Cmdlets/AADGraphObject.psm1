@@ -47,7 +47,7 @@ param ([string]$Type,
         $PageUri = $BaseUri
     }
     Write-Verbose "FIRST HTTP GET $PageUri" 
-    $result = Invoke-WebRequest -Method Get -Uri $PageUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
+    $result = Invoke-Webrequest -UseBasicParsing -Method Get -Uri $PageUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
     if($result.StatusCode -eq 200){
         $page++;
         $oDataSet= (ConvertFrom-Json $result.Content)
@@ -69,7 +69,7 @@ param ([string]$Type,
 
                         Write-Verbose "HTTP GET $PageUri"
                         # subsequent pages are the same size as the first one
-                        $result = Invoke-WebRequest -Method Get -Uri $PageUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"} 
+                        $result = Invoke-Webrequest -UseBasicParsing -Method Get -Uri $PageUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"} 
                         if($result.StatusCode -eq 200){
                             $oDataSet= (ConvertFrom-Json $result.Content)
                             if($oDataSet-ne $null){
@@ -105,7 +105,7 @@ param([string]$Type, [string]$Id, [switch] $Silent)
     if(-not $Silent){
       Write-Host HTTP GET $BaseUri -ForegroundColor Cyan
     }
-    $result = Invoke-WebRequest -Method Get -Uri $BaseUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
+    $result = Invoke-Webrequest -UseBasicParsing -Method Get -Uri $BaseUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
     if($result.StatusCode -eq 200)
     {
       if(-not $Silent){
@@ -137,7 +137,7 @@ function New-AADGraphObject([string]$Type, [object]$Object, [switch] $Silent) {
     $byteArray = $enc.GetBytes($body)
     $contentLength = $byteArray.Length
     $headers = @{"Authorization"=$header;"Content-Type"="application/json";"Content-Length"=$contentLength}
-    $result = Invoke-WebRequest -Method Post -Uri $BaseUri -Headers $headers -Body $body
+    $result = Invoke-Webrequest -UseBasicParsing -Method Post -Uri $BaseUri -Headers $headers -Body $body
     if($result.StatusCode -eq 201){
       if(-not $Silent){
         Write-Host "Create succeeded." -ForegroundColor Cyan
@@ -167,7 +167,7 @@ function Set-AADGraphObject([string]$Type, [string]$Id, [object]$Object, [switch
     $byteArray = $enc.GetBytes($body)
     $contentLength = $byteArray.Length
     $headers = @{"Authorization"=$header;"Content-Type"="application/json";"Content-Length"=$contentLength}
-    $result = Invoke-WebRequest -Method Patch -Uri $BaseUri -Headers $headers -Body $body
+    $result = Invoke-Webrequest -UseBasicParsing -Method Patch -Uri $BaseUri -Headers $headers -Body $body
     if($result.StatusCode -eq 204){
       if(-not $Silent){
         Write-Host "Update succeeded." -ForegroundColor Cyan
@@ -188,7 +188,7 @@ function Remove-AADGraphObject([string]$Type, [string]$Id, [switch] $Silent) {
       Write-Host HTTP DELETE $BaseUri -ForegroundColor Cyan
     }
     $headers = @{"Authorization"=$header;"Content-Type"="application/json"}
-    $result = Invoke-WebRequest -Method Delete -Uri $BaseUri -Headers $headers
+    $result = Invoke-Webrequest -UseBasicParsing -Method Delete -Uri $BaseUri -Headers $headers
     if($result.StatusCode -eq 204){
       if(-not $Silent){
         Write-Host "Delete succeeded." -ForegroundColor Cyan
@@ -214,7 +214,7 @@ function Get-AADGraphLinkedObject([string]$Type, [string] $Id, [string]$Relation
     if(-not $Silent) {
       Write-Host HTTP GET $BaseUri -ForegroundColor Cyan
     }
-    $result = Invoke-WebRequest -Method Get -Uri $BaseUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
+    $result = Invoke-Webrequest -UseBasicParsing -Method Get -Uri $BaseUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
     if($result.StatusCode -eq 200){
       if(-not $Silent) {
         Write-Host "Get succeeded." -ForegroundColor Cyan
@@ -232,7 +232,7 @@ function Get-AADGraphLinkedObject([string]$Type, [string] $Id, [string]$Relation
                   Write-Host "Getting the next page of results." -ForegroundColor Cyan
                   Write-Host HTTP GET ($BaseUri + "&" + $Script:SkipToken.Split('?')[1]) -ForegroundColor Cyan
                 }
-                $result = Invoke-WebRequest -Method Get -Uri ($BaseUri + "&" + $Script:SkipToken.Split('?')[1]) -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
+                $result = Invoke-Webrequest -UseBasicParsing -Method Get -Uri ($BaseUri + "&" + $Script:SkipToken.Split('?')[1]) -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
                 if($result.StatusCode -eq 200){
                   $oDataSet= (ConvertFrom-Json $result.Content)
                   if($oDataSet-ne $null){
@@ -295,7 +295,7 @@ function Set-AADGraphObjectProperty([string]$Type, [string] $Id, [string]$Proper
     }
     $contentLength = $byteArray.Length
     $headers = @{"Authorization"=$header;"Content-Type"=$contentType;"Content-Length"=$contentLength}
-    $result = Invoke-WebRequest -Method $HTTPMethod -Uri $BaseUri -Headers $headers -Body $body
+    $result = Invoke-Webrequest -UseBasicParsing -Method $HTTPMethod -Uri $BaseUri -Headers $headers -Body $body
     if($result.StatusCode -eq 204){
       if(-not $Silent){
         Write-Host "Update succeeded." -ForegroundColor Cyan
