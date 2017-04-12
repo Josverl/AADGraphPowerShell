@@ -4,6 +4,12 @@
 
 $Script:SkipToken = "";
 
+function Test-AADGraphNextObject {
+    #If there is a skiptoken, then there is a next object 
+    return ([string]::IsNullOrEmpty($Script:SkipToken) -eq $false)
+}
+
+
 function Get-AADGraphObject{
 [CmdletBinding()]
 param ([string]$Type, 

@@ -129,7 +129,7 @@ Task Copy   -description "Copy items to the release folder" `
         #Note the subfolders are not copied :-( 
         
         #Robocopy to the rescue 
-        &robocopy "$BasePath" "$ReleaseDir" * /XD Release .git .vscode scratch /XF .git* *.tests.ps1 build.ps1 default.ps1 /S /NP /NFL /NDL
+        &robocopy "$BasePath" "$ReleaseDir" * /XD Release released .git .vscode scratch /XF .git* *.tests.ps1 build.ps1 default.ps1 /S /NP /NFL /NDL
 
         #Clean up the unneeded folders and stuff underneath the Microsoft.IdentityModel module folders 
         $Modulefolders = Get-ChildItem -Path $ReleaseDir -Directory -Filter "Microsoft.*"
