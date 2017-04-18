@@ -3,7 +3,7 @@
     # Script module or binary module file associated with this manifest.
     RootModule = 'AADGraph.psm1'
     # Version number of this module.
-    ModuleVersion = '1.4.3'
+    ModuleVersion = '1.5'
     # ID used to uniquely identify this module
     GUID = 'f166fdf6-859a-4649-ab4e-b4e3dc47c39e'
     # Author of this module

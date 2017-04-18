@@ -32,36 +32,37 @@ function Get-AuthenticationResult {
             $authority = "https://login.windows.net/" + $tenant
         }
     }
-  
-    $authContext = New-Object -TypeName Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext -ArgumentList $authority, $false;
+    if ($Global:AADGraph.authContext -eq $null) {
+        $Global:AADGraph.authContext = New-Object -TypeName Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext -ArgumentList $authority, $false;
+    }
     #Aquires security token from the authority
     if ( -Not $credentials ) {
         # If Always, asks service to show user the authentication page which gives them chance to authenticate as a different user.
-        $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always)
+        $authResult = $Global:AADGraph.authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always)
         
     } else {           
         <#      
         #Assumed Name , required to prompt
         $UserIdentifyer = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier"  -ArgumentList  "josverl2@microsoft.com",  "OptionalDisplayableId"
-        $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always, $UserIdentifyer)
+        $authResult = $Global:AADGraph.authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always, $UserIdentifyer)
 
         #Known Name , required to prompt
         $UserIdentifyer = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier"  -ArgumentList  "josverl@microsoft.com",  "RequiredDisplayableId"
-        $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always, $UserIdentifyer)
+        $authResult = $Global:AADGraph.authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Always, $UserIdentifyer)
 
         #Known Name , Auto prompt
         $UserIdentifyer = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier"  -ArgumentList  "josverl@microsoft.com",  "RequiredDisplayableId"
-        $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Auto, $UserIdentifyer)
+        $authResult = $Global:AADGraph.authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Auto, $UserIdentifyer)
 
         #Known Name , Never Prompt
         $UserIdentifyer = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier"  -ArgumentList  "josverl@microsoft.com",  "RequiredDisplayableId"
-        $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Never, $UserIdentifyer)
+        $authResult = $Global:AADGraph.authContext.AcquireToken($resourceAppIdURI, $clientId, $redirectUri, [Microsoft.IdentityModel.Clients.ActiveDirectory.PromptBehavior]::Never, $UserIdentifyer)
 #>
         # transform credential into the required type
-        $cred2 = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserCredential" -ArgumentList @( $Credentials.UserName , $Credentials.Password )
+        $AADCredential = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserCredential" -ArgumentList @( $Credentials.UserName , $Credentials.Password )
 
         #Call the silent overload     
-        $authResult = $authContext.AcquireToken($resourceAppIdURI, $clientId, $Cred2) 
+        $authResult = $Global:AADGraph.authContext.AcquireToken($resourceAppIdURI, $clientId, $AADCredential) 
     }
 
     return $authResult
@@ -82,39 +83,52 @@ function Connect-AADGraph {
         #environment or production tier 
         [Parameter(Position=1)][string]
         $env="prod",
-        #Version of graph API to use ( 1.5,1.6,beta)  
+        #Version of the AAD graph API to use ( 1.5,1.6,beta)  
         [Parameter(Position=2)][string]
         $graphVer="1.6", 
         #credentials to authenticate
         [Parameter(Position=3)][System.Management.Automation.PSCredential]
         $Credentials = $null
     ) 
+    Begin {
+        if ($Global:AADGraph -eq $NULL) {
+            Write-Verbose 'Initialise AADGraph'
+            
+            $Global:AADGraph =new-object PSObject -Property @{
+                authContext = $null                 #ADAL AuthContext and tokencache 
+                AuthenticationResult = $null;       #The Initial / most recent Auth result
+                aadEnvironment = $env               #The environment 
+                APIVersion = $graphVer
+                TenantURL = $null
+            }
+
+        }
+    }
+
     PROCESS {
-        $global:AuthenticationResult = $null
-        $global:aadGPoShEnv = $env
-        $global:GraphAPIVersion = $graphVer
+
         #Use the appropriate endpoints
         switch ($env.ToLower()) {
             'ppe'   {
-                $global:aadGraphUrl = "https://graph.ppe.windows.net/"
+                $global:aadGraph.TenantURL = "https://graph.ppe.windows.net/"
             }
             'china' {
-                $global:aadGraphUrl = "https://graph.chinacloudapi.cn/"
+                $global:aadGraph.TenantURL = "https://graph.chinacloudapi.cn/"
             }
             Default {
-                $global:aadGraphUrl = "https://graph.windows.net/"
+                $global:aadGraph.TenantURL = "https://graph.windows.net/"
             }
         }
-        $global:AuthenticationResult = Get-AuthenticationResult -Tenant $tenant -Env $env -Credentials $Credentials
+        $global:AADGraph.AuthenticationResult = Get-AuthenticationResult -Tenant $tenant -Env $env -Credentials $Credentials
     }
 }
 
 function Execute-AADGraphQuery ($Base, $HTTPVerb, $Query, $Data, [switch] $Silent) {
     $return = $null
-    if($global:AuthenticationResult -ne $null) {
-        $header = $global:AuthenticationResult.CreateAuthorizationHeader()
+    if($global:AADGraph.AuthenticationResult -ne $null) {
+        $header = $global:AADGraph.AuthenticationResult.CreateAuthorizationHeader()
         $headers = @{"Authorization"=$header;"Content-Type"="application/json"}
-        $uri = [string]::Format("{0}{1}/{2}?api-version={3}{4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId, $base, $global:GraphAPIVersion, $query)
+        $uri = [string]::Format("{0}{1}/{2}?api-version={3}{4}",$global:aadGraph.TenantURL,$global:AADGraph.AuthenticationResult.TenantId, $base, $global:AADGraph.APIVersion, $query)
         if($data -ne $null){
             $enc = New-Object "System.Text.ASCIIEncoding"
             $body = ConvertTo-Json -InputObject $Data -Depth 10

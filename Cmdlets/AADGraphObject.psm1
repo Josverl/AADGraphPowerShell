@@ -30,15 +30,15 @@ param ([string]$Type,
     $activity = "Get {0}" -f $Type
 
     #Check if we are yet authenticated 
-    if($global:AuthenticationResult -eq $null){
+    if($global:AADGraph.AuthenticationResult -eq $null){
         Write-warning "Not connected to an AAD tenant. First run Connect-AADGraph." 
         return $null
     }
     #and build the authentication
-    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
+    $header = $global:AADGraph.AuthenticationResult.CreateAuthorizationHeader()
 
     #Create the Base URI 
-    $BaseUri = [string]::Format("{0}{1}/{2}?api-version={3}{4}{5}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(),$global:GraphAPIVersion,$Query,$TopString)
+    $BaseUri = [string]::Format("{0}{1}/{2}?api-version={3}{4}{5}",$global:aadGraph.TenantURL,$global:AADGraph.AuthenticationResult.TenantId,$Type.Trim(),$global:AADGraph.APIVersion,$Query,$TopString)
     
     #Next page is possible , if a prior page had more results  
     if ($Next -and $Script:SkipToken -eQ $null) {
@@ -53,7 +53,7 @@ param ([string]$Type,
         $PageUri = $BaseUri
     }
     Write-Verbose "FIRST HTTP GET $PageUri" 
-    $result = Invoke-Webrequest -UseBasicParsing -Method Get -Uri $PageUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"}
+    $result = Invoke-Webrequest -UseBasicParsing -Method Get -Uri $PageUri -Headers @{"Authorization"=$header;"Content-Type"="application/json"} 
     if($result.StatusCode -eq 200){
         $page++;
         $oDataSet= (ConvertFrom-Json $result.Content)
@@ -105,9 +105,9 @@ function Get-AADGraphObjectById  {
 param([string]$Type, [string]$Id, [switch] $Silent)
 
   $object = $null
-  if($global:AuthenticationResult -ne $null){
-    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
-    $BaseUri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
+  if($global:AADGraph.AuthenticationResult -ne $null){
+    $header = $global:AADGraph.AuthenticationResult.CreateAuthorizationHeader()
+    $BaseUri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraph.TenantURL,$global:AADGraph.AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:AADGraph.APIVersion)
     if(-not $Silent){
       Write-Host HTTP GET $BaseUri -ForegroundColor Cyan
     }
@@ -129,9 +129,9 @@ param([string]$Type, [string]$Id, [switch] $Silent)
 #create a new object in AAD 
 function New-AADGraphObject([string]$Type, [object]$Object, [switch] $Silent) {
   $newObject = $null
-  if($global:AuthenticationResult -ne $null) {
-    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
-    $BaseUri = [string]::Format("{0}{1}/{2}?api-version={3}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(),$global:GraphAPIVersion)
+  if($global:AADGraph.AuthenticationResult -ne $null) {
+    $header = $global:AADGraph.AuthenticationResult.CreateAuthorizationHeader()
+    $BaseUri = [string]::Format("{0}{1}/{2}?api-version={3}",$global:aadGraph.TenantURL,$global:AADGraph.AuthenticationResult.TenantId,$Type.Trim(),$global:AADGraph.APIVersion)
     if(-not $Silent){
       Write-Host HTTP POST $BaseUri -ForegroundColor Cyan
     }
@@ -159,9 +159,9 @@ function New-AADGraphObject([string]$Type, [object]$Object, [switch] $Silent) {
 
 #Update / chnage an existing AAD object
 function Set-AADGraphObject([string]$Type, [string]$Id, [object]$Object, [switch] $Silent) {
-  if($global:AuthenticationResult -ne $null) {
-    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
-    $BaseUri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
+  if($global:AADGraph.AuthenticationResult -ne $null) {
+    $header = $global:AADGraph.AuthenticationResult.CreateAuthorizationHeader()
+    $BaseUri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraph.TenantURL,$global:AADGraph.AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:AADGraph.APIVersion)
     if(-not $Silent){
       Write-Host HTTP PATCH $BaseUri -ForegroundColor Cyan
     }
@@ -187,9 +187,9 @@ function Set-AADGraphObject([string]$Type, [string]$Id, [object]$Object, [switch
 
 #Remove / delete an object from the directory 
 function Remove-AADGraphObject([string]$Type, [string]$Id, [switch] $Silent) {
-  if($global:AuthenticationResult -ne $null) {
-    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
-    $BaseUri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:GraphAPIVersion)
+  if($global:AADGraph.AuthenticationResult -ne $null) {
+    $header = $global:AADGraph.AuthenticationResult.CreateAuthorizationHeader()
+    $BaseUri = [string]::Format("{0}{1}/{2}/{3}?api-version={4}",$global:aadGraph.TenantURL,$global:AADGraph.AuthenticationResult.TenantId,$Type.Trim(), $Id.Trim(),$global:AADGraph.APIVersion)
     if(-not $Silent){
       Write-Host HTTP DELETE $BaseUri -ForegroundColor Cyan
     }
@@ -208,14 +208,14 @@ function Remove-AADGraphObject([string]$Type, [string]$Id, [switch] $Silent) {
 
 function Get-AADGraphLinkedObject([string]$Type, [string] $Id, [string]$Relationship, [switch]$GetLinksOnly, [switch]$Binary, [switch]$All, [switch]$Silent) {
   $objects = $null
-  if($global:AuthenticationResult -ne $null){
-    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
+  if($global:AADGraph.AuthenticationResult -ne $null){
+    $header = $global:AADGraph.AuthenticationResult.CreateAuthorizationHeader()
     $BaseUri = $null
     if($GetLinksOnly) {
-      $BaseUri = [string]::Format("{0}{1}/{2}/{3}/`$links/{4}?api-version={5}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId, $Type, $Id, $Relationship,$global:GraphAPIVersion)
+      $BaseUri = [string]::Format("{0}{1}/{2}/{3}/`$links/{4}?api-version={5}",$global:aadGraph.TenantURL,$global:AADGraph.AuthenticationResult.TenantId, $Type, $Id, $Relationship,$global:AADGraph.APIVersion)
     }
     else {
-      $BaseUri = [string]::Format("{0}{1}/{2}/{3}/{4}?api-version={5}",$global:aadGraphUrl,$global:AuthenticationResult.TenantId, $Type, $Id, $Relationship,$global:GraphAPIVersion)
+      $BaseUri = [string]::Format("{0}{1}/{2}/{3}/{4}?api-version={5}",$global:aadGraph.TenantURL,$global:AADGraph.AuthenticationResult.TenantId, $Type, $Id, $Relationship,$global:AADGraph.APIVersion)
     }
     if(-not $Silent) {
       Write-Host HTTP GET $BaseUri -ForegroundColor Cyan
@@ -266,14 +266,14 @@ function Get-AADGraphLinkedObject([string]$Type, [string] $Id, [string]$Relation
 }
 
 function Set-AADGraphObjectProperty([string]$Type, [string] $Id, [string]$Property, [object]$Value, [bool]$IsLinked, [string]$ContentType, [ValidateSet("PUT", "POST", ignorecase=$true)][string]$HTTPMethod = "PUT", [switch] $Silent) {
-  if($global:AuthenticationResult -ne $null) {
-    $header = $global:AuthenticationResult.CreateAuthorizationHeader()
+  if($global:AADGraph.AuthenticationResult -ne $null) {
+    $header = $global:AADGraph.AuthenticationResult.CreateAuthorizationHeader()
     $BaseUri = $null
     if($IsLinked) {
-      $BaseUri = [string]::Format('{0}{1}/{2}/{3}/$links/{4}?api-version={5}',$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type, $Id, $Property,$global:GraphAPIVersion)
+      $BaseUri = [string]::Format('{0}{1}/{2}/{3}/$links/{4}?api-version={5}',$global:aadGraph.TenantURL,$global:AADGraph.AuthenticationResult.TenantId,$Type, $Id, $Property,$global:AADGraph.APIVersion)
     }
     else {
-      $BaseUri = [string]::Format('{0}{1}/{2}/{3}/{4}?api-version={5}',$global:aadGraphUrl,$global:AuthenticationResult.TenantId,$Type, $Id, $Property,$global:GraphAPIVersion)
+      $BaseUri = [string]::Format('{0}{1}/{2}/{3}/{4}?api-version={5}',$global:aadGraph.TenantURL,$global:AADGraph.AuthenticationResult.TenantId,$Type, $Id, $Property,$global:AADGraph.APIVersion)
     }
     
     if(-not $Silent){

@@ -407,7 +407,7 @@ function New-AADGraphAdminPermissionGrantIfNeeded {
 }
 
 function Get-GraphResourceId() {
-    switch($global:aadGPoShEnv.ToLower()) {
+    switch($global:AADGraph.aadEnvironment.ToLower()) {
         'ppe' {return '97ceba2e-60aa-4b82-968f-d0a1c17570c1'}
         # TODO: Other environments
         default {return $null}
